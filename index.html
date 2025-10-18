@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Son's Quotes</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+    .status {
+      margin-top: 1rem;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <h1>Track My Son's Quotes</h1>
+  <form id="quoteForm">
+    <label for="quote">Quote:</label><br>
+    <textarea id="quote" name="quote" required></textarea><br>
+    <button type="submit">Save Quote</button>
+  </form>
+  <div class="status" id="status"></div>
+
+  <script>
+    const form = document.getElementById('quoteForm');
+    const status = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const quote = document.getElementById('quote').value.trim();
+      if (!quote) return;
+
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+      const data = {
+        Date: today,
+        Quote: quote
+      };
+
+      try {
+        const response = await fetch('https://script.google.com/macros/s/AKfycbzzqdeuIDS0xNpvRqSHedTexscdxqZldZ3D-k1dtvEHvKUAgch20FUGWxkrhvpuA7gh3g/exec', {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+          status.textContent = "Quote saved successfully!";
+          form.reset();
+        } else {
+          status.textContent = "Failed to save quote.";
+        }
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Error connecting to the server.";
+      }
+    });
+  </script>
+</body>
+</html>
