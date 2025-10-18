@@ -55,7 +55,7 @@
         status.style.color = "blue";
         
         // Use GET request with URL parameters to bypass CORS
-        const url = new URL('https://script.google.com/macros/s/AKfycbx41Lye8l5eBuLQGjaYohpA0WQgI8pPlHQJfaqNSv6dvFpH0e7vrpbl16UZf71BHSxOtA/exec');
+        const url = new URL('https://script.google.com/macros/s/AKfycbwRHr7vT0SjsQmu6OY90henhKDNIzs6OsOK8vySKXNiLSP_Qk4xquqUmA8MwBhGmhWMqQ/exec');
         url.searchParams.append('date', data.Date);
         url.searchParams.append('quote', data.Quote);
         
@@ -67,6 +67,7 @@
         // With no-cors mode, we can't check response details
         // but we can assume success if no error is thrown
         console.log('Request sent successfully');
+        console.log('URL called:', url.toString());
         status.textContent = "Quote saved successfully!";
         status.style.color = "green";
         form.reset();
