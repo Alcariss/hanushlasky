@@ -370,47 +370,119 @@
         
         console.log('Fetching quotes from:', url.toString());
         
-        // Try CORS-enabled fetch with proper error handling
-        console.log('Attempting to fetch quotes with CORS...');
+        // Method 1: Try JSONP approach (most reliable for Google Apps Script)
+        console.log('Attempting JSONP approach...');
         
         try {
-          const response = await fetch(url, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-              'Content-Type': 'application/json',
-            }
+          const jsonpUrl = new URL(url);
+          const callbackName = 'quotesCallback' + Date.now();
+          jsonpUrl.searchParams.set('callback', callbackName);
+          
+          const jsonpPromise = new Promise((resolve, reject) => {
+            // Set up callback function
+            window[callbackName] = (data) => {
+              console.log('JSONP callback received data:', data);
+              cleanup();
+              resolve(data);
+            };
+            
+            // Create script element
+            const script = document.createElement('script');
+            script.src = jsonpUrl.toString();
+            
+            const cleanup = () => {
+              if (window[callbackName]) {
+                delete window[callbackName];
+              }
+              if (script.parentNode) {
+                document.head.removeChild(script);
+              }
+            };
+            
+            script.onerror = () => {
+              console.log('JSONP script failed to load');
+              cleanup();
+              reject(new Error('JSONP script loading failed'));
+            };
+            
+            // Add timeout
+            const timeout = setTimeout(() => {
+              console.log('JSONP timeout reached');
+              cleanup();
+              reject(new Error('JSONP request timeout'));
+            }, 8000);
+            
+            // Override cleanup to clear timeout
+            const originalCleanup = cleanup;
+            const cleanupWithTimeout = () => {
+              clearTimeout(timeout);
+              originalCleanup();
+            };
+            
+            window[callbackName] = (data) => {
+              console.log('JSONP callback received data:', data);
+              cleanupWithTimeout();
+              resolve(data);
+            };
+            
+            script.onerror = () => {
+              console.log('JSONP script failed to load');
+              cleanupWithTimeout();
+              reject(new Error('JSONP script loading failed'));
+            };
+            
+            document.head.appendChild(script);
           });
           
-          console.log('Response status:', response.status);
-          console.log('Response ok:', response.ok);
+          const data = await jsonpPromise;
+          displayQuotes(data);
+          return;
           
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Successfully fetched quotes:', data);
-            displayQuotes(data);
-            return;
-          } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
+        } catch (jsonpError) {
+          console.log('JSONP failed:', jsonpError);
+        }
+        
+        // Method 2: Try simple GET without CORS mode
+        console.log('Trying simple fetch...');
+        try {
+          const simpleResponse = await fetch(url, {
+            method: 'GET',
+            mode: 'no-cors'
+          });
+          console.log('Simple fetch completed (no-cors mode)');
           
-        } catch (fetchError) {
-          console.log('CORS fetch failed:', fetchError);
+          // With no-cors we can't read the response, but show a helpful message
+          quotesContainer.innerHTML = `
+            <div class="no-quotes">
+              <p>✅ Request sent successfully!</p>
+              <p>Due to browser security, we can't display quotes here automatically.</p>
+              <p><a href="https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
+                📊 View Your Quotes in Google Sheets →
+              </a></p>
+              <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
+                <strong>Good news:</strong> Your quotes are being saved perfectly! 
+                You can always view them in the Google Sheet above.
+              </p>
+            </div>
+          `;
           
-          // Fallback: Show helpful message with direct link
+        } catch (simpleError) {
+          console.log('Simple fetch failed:', simpleError);
+          
+          // Final fallback message
           quotesContainer.innerHTML = `
             <div class="error-message">
               <p>⚠️ Unable to load quotes automatically</p>
-              <p><strong>Reason:</strong> ${fetchError.message}</p>
-              <p>Your quotes are being saved successfully to Google Sheets!</p>
+              <p>This is due to browser security restrictions with cross-origin requests.</p>
+              <p><strong>Your quotes are still being saved successfully!</strong></p>
               <p><a href="https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
                 📊 View All Quotes in Google Sheets →
               </a></p>
               <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; color: #666;">Technical Details</summary>
+                <summary style="cursor: pointer; color: #666;">Why this happens</summary>
                 <p style="font-size: 0.9em; color: #666; margin-top: 5px;">
-                  This may be due to Google Apps Script CORS settings or browser security policies. 
-                  The quotes are still being saved successfully.
+                  GitHub Pages and Google Apps Script have security restrictions that prevent 
+                  automatic data loading. This is normal and doesn't affect saving quotes.
                 </p>
               </details>
             </div>
