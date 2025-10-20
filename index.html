@@ -73,6 +73,22 @@
       border-color: #007bff;
     }
     
+    input[type="date"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 2px solid #e1e5e9;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: border-color 0.2s ease;
+    }
+    
+    input[type="date"]:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    
     button {
       width: 100%;
       padding: 0.75rem;
@@ -100,9 +116,29 @@
       text-align: center;
       border-radius: 6px;
       font-weight: 500;
-      color: green;
+      display: none; /* Hidden by default */
+    }
+    
+    .status.show {
+      display: block;
+    }
+    
+    .status.success {
+      color: #155724;
       background-color: #d4edda;
       border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      color: #721c24;
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.info {
+      color: #0c5460;
+      background-color: #d1ecf1;
+      border: 1px solid #bee5eb;
     }
     
     .quotes-section {
@@ -114,24 +150,6 @@
       color: #333;
       margin-bottom: 1rem;
       font-size: 1.25rem;
-    }
-    
-    #refreshBtn {
-      width: 100%;
-      padding: 0.5rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-      background-color: #6c757d;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-bottom: 1rem;
-      transition: background-color 0.2s ease;
-    }
-    
-    #refreshBtn:hover {
-      background-color: #545b62;
     }
     
     #quotesContainer {
@@ -208,6 +226,10 @@
         font-size: 16px; /* Prevents zoom on iOS */
       }
       
+      input[type="date"] {
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+      
       button {
         padding: 0.875rem;
         font-size: 1.125rem;
@@ -263,99 +285,166 @@
   <form id="quoteForm">
     <label for="quote">Quote:</label><br>
     <textarea id="quote" name="quote" required></textarea><br>
+    
+    <label for="quoteDate">Date:</label><br>
+    <input type="date" id="quoteDate" name="quoteDate" required><br>
+    
     <button type="submit">Save Quote</button>
   </form>
   <div class="status" id="status"></div>
 
   <div class="quotes-section">
     <h2>Recent Quotes</h2>
-    <button id="refreshBtn" type="button">Load Quotes</button>
     <div id="quotesContainer">
       <div class="loading">Loading quotes...</div>
     </div>
   </div>
 
   <script>
+    // Configuration
+    const CONFIG = {
+      SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwBO8W5FPkHfRPAU2HXEGLjpRgya3du1Joel3jxVyzQSh-rmcreBC4oTZgqbH62Vr3K/exec',
+      GOOGLE_SHEET_URL: 'https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit',
+      TIMEOUT: 8000,
+      REFRESH_DELAY: 1000,
+      AUTO_HIDE_DELAY: 3000
+    };
+    
+    // DOM Elements
     const form = document.getElementById('quoteForm');
     const status = document.getElementById('status');
     const quotesContainer = document.getElementById('quotesContainer');
-    const refreshBtn = document.getElementById('refreshBtn');
+    const quoteDateInput = document.getElementById('quoteDate');
+    
+    // Set today's date as default
+    quoteDateInput.value = new Date().toISOString().split('T')[0];
+
+    // Helper function to show status messages
+    function showStatus(message, type) {
+      status.textContent = message;
+      status.className = `status show ${type}`;
+      
+      // Auto-hide success and info messages after 3 seconds
+      if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+          status.className = 'status';
+        }, CONFIG.AUTO_HIDE_DELAY);
+      }
+    }
+    
+    // Helper function to reset form and refresh quotes
+    function resetFormAndRefresh() {
+      form.reset();
+      quoteDateInput.value = new Date().toISOString().split('T')[0];
+      setTimeout(() => safeFetchQuotes(), CONFIG.REFRESH_DELAY);
+    }
+    
+    // Save quote using fetch method
+    async function saveQuoteWithFetch(url) {
+      const response = await fetch(url, {
+        method: 'GET',
+        mode: 'no-cors'
+      });
+      console.log('Fetch completed successfully');
+      showStatus("Quote saved successfully!", "success");
+      resetFormAndRefresh();
+    }
+    
+    // Save quote using image fallback method
+    function saveQuoteWithImage(url) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          console.log('Image method succeeded');
+          showStatus("Quote saved successfully!", "success");
+          resetFormAndRefresh();
+          resolve();
+        };
+        img.onerror = () => {
+          console.log('Image method completed (expected error)');
+          // Even on "error", the request was likely sent
+          showStatus("Quote saved successfully!", "success");
+          resetFormAndRefresh();
+          resolve();
+        };
+        
+        // Add a timestamp to prevent caching
+        const imageUrl = url.toString() + '&_t=' + Date.now();
+        img.src = imageUrl;
+      });
+    }
+    
+    // Helper function to create fallback HTML for quote loading
+    function createFallbackHTML(title, message, showTroubleshooting = false) {
+      const troubleshootingSection = showTroubleshooting ? `
+        <details style="margin-top: 10px;">
+          <summary style="cursor: pointer; color: #666;">Troubleshooting</summary>
+          <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+            <p><strong>Check your Google Apps Script:</strong></p>
+            <ol>
+              <li>Make sure it's deployed as a web app</li>
+              <li>Set "Execute as: Me"</li>
+              <li>Set "Who has access: Anyone"</li>
+              <li>Use the latest deployment URL</li>
+            </ol>
+            <p><strong>Current script URL being used:</strong><br>
+            <code style="background: #f5f5f5; padding: 2px 4px; word-break: break-all;">
+              ${CONFIG.SCRIPT_URL}
+            </code></p>
+          </div>
+        </details>
+      ` : '';
+      
+      return `
+        <div class="error-message">
+          <p>${title}</p>
+          <p><strong>${message}</strong></p>
+          <p><a href="${CONFIG.GOOGLE_SHEET_URL}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
+            📊 View All Quotes in Google Sheets →
+          </a></p>
+          ${troubleshootingSection}
+        </div>
+      `;
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const quote = document.getElementById('quote').value.trim();
+      const selectedDate = quoteDateInput.value;
+      
       if (!quote) return;
-
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      if (!selectedDate) {
+        showStatus("Please select a date.", "error");
+        return;
+      }
 
       const data = {
-        Date: today,
+        Date: selectedDate,
         Quote: quote
       };
 
       try {
-        status.textContent = "Saving quote...";
-        status.style.color = "blue";
+        showStatus("Saving quote...", "info");
         
         // Use GET request with URL parameters to bypass CORS
-        const url = new URL('https://script.google.com/macros/s/AKfycbwBO8W5FPkHfRPAU2HXEGLjpRgya3du1Joel3jxVyzQSh-rmcreBC4oTZgqbH62Vr3K/exec');
+        const url = new URL(CONFIG.SCRIPT_URL);
         url.searchParams.append('date', data.Date);
         url.searchParams.append('quote', data.Quote);
         
-        console.log('Environment check:');
-        console.log('- Location:', window.location.href);
-        console.log('- User Agent:', navigator.userAgent);
-        console.log('- URL to call:', url.toString());
+        console.log('Saving quote to:', url.toString());
         
         // Try fetch approach first
         try {
-          const response = await fetch(url, {
-            method: 'GET',
-            mode: 'no-cors'
-          });
-
-          console.log('Fetch completed successfully');
-          status.textContent = "Quote saved successfully!";
-          status.style.color = "green";
-          form.reset();
-          
-          // Refresh quotes after saving
-          setTimeout(() => safeFetchQuotes(), 1000);
-          
+          await saveQuoteWithFetch(url);
         } catch (fetchError) {
           console.warn('Fetch failed, trying image fallback:', fetchError);
-          
           // Fallback: Use image loading technique for GitHub Pages
-          const img = new Image();
-          img.onload = () => {
-            console.log('Image method succeeded');
-            status.textContent = "Quote saved successfully!";
-            status.style.color = "green";
-            form.reset();
-            
-            // Refresh quotes after saving
-            setTimeout(() => safeFetchQuotes(), 1000);
-          };
-          img.onerror = () => {
-            console.log('Image method completed (expected error)');
-            // Even on "error", the request was likely sent
-            status.textContent = "Quote saved successfully!";
-            status.style.color = "green";
-            form.reset();
-            
-            // Refresh quotes after saving
-            setTimeout(() => safeFetchQuotes(), 1000);
-          };
-          
-          // Add a timestamp to prevent caching
-          const imageUrl = url.toString() + '&_t=' + Date.now();
-          img.src = imageUrl;
+          await saveQuoteWithImage(url);
         }
         
       } catch (error) {
         console.error('All methods failed:', error);
-        status.textContent = `Error connecting to the server: ${error.message}`;
-        status.style.color = "red";
+        showStatus(`Error connecting to the server: ${error.message}`, "error");
       }
     });
 
@@ -365,34 +454,21 @@
         quotesContainer.innerHTML = '<div class="loading">Loading quotes...</div>';
         
         // Use GET request to fetch quotes with action parameter
-        const url = new URL('https://script.google.com/macros/s/AKfycbwBO8W5FPkHfRPAU2HXEGLjpRgya3du1Joel3jxVyzQSh-rmcreBC4oTZgqbH62Vr3K/exec');
+        const url = new URL(CONFIG.SCRIPT_URL);
         url.searchParams.append('action', 'fetch');
         
         console.log('Fetching quotes from:', url.toString());
         
         // Method 1: Try JSONP approach (most reliable for Google Apps Script)
         console.log('Attempting JSONP approach...');
-        console.log('Original URL:', url.toString());
         
         try {
           const jsonpUrl = new URL(url);
           const callbackName = 'quotesCallback' + Date.now();
           jsonpUrl.searchParams.set('callback', callbackName);
           
-          console.log('JSONP URL:', jsonpUrl.toString());
-          console.log('Callback function name:', callbackName);
-          
           const jsonpPromise = new Promise((resolve, reject) => {
-            // Set up callback function
-            window[callbackName] = (data) => {
-              console.log('JSONP callback received data:', data);
-              cleanup();
-              resolve(data);
-            };
-            
-            // Create script element
             const script = document.createElement('script');
-            script.src = jsonpUrl.toString();
             
             const cleanup = () => {
               if (window[callbackName]) {
@@ -403,41 +479,29 @@
               }
             };
             
-            script.onerror = () => {
-              console.log('JSONP script failed to load');
-              cleanup();
-              reject(new Error('JSONP script loading failed'));
-            };
-            
             // Add timeout
             const timeout = setTimeout(() => {
               console.log('JSONP timeout reached');
               cleanup();
               reject(new Error('JSONP request timeout'));
-            }, 8000);
+            }, CONFIG.TIMEOUT);
             
-            // Override cleanup to clear timeout
-            const originalCleanup = cleanup;
-            const cleanupWithTimeout = () => {
-              clearTimeout(timeout);
-              originalCleanup();
-            };
-            
+            // Set up callback function
             window[callbackName] = (data) => {
               console.log('JSONP callback received data:', data);
-              cleanupWithTimeout();
+              clearTimeout(timeout);
+              cleanup();
               resolve(data);
             };
             
-            script.onerror = (error) => {
+            script.onerror = () => {
               console.log('JSONP script failed to load');
-              console.log('Script error event:', error);
-              console.log('Script src that failed:', script.src);
-              cleanupWithTimeout();
+              clearTimeout(timeout);
+              cleanup();
               reject(new Error('JSONP script loading failed'));
             };
             
-            console.log('Adding JSONP script to head...');
+            script.src = jsonpUrl.toString();
             document.head.appendChild(script);
           });
           
@@ -447,32 +511,6 @@
           
         } catch (jsonpError) {
           console.log('JSONP failed:', jsonpError);
-        }
-        
-        // Method 1.5: Test if the Google Apps Script URL is accessible at all
-        console.log('Testing basic script accessibility...');
-        try {
-          // Test with a simple script tag without callback to see if URL is reachable
-          const testScript = document.createElement('script');
-          testScript.src = url.toString();
-          testScript.onerror = () => {
-            console.log('❌ Google Apps Script URL is not accessible');
-            console.log('This suggests the script URL may be incorrect or the deployment has issues');
-          };
-          testScript.onload = () => {
-            console.log('✅ Google Apps Script URL is accessible (but may not support JSONP)');
-            document.head.removeChild(testScript);
-          };
-          document.head.appendChild(testScript);
-          
-          // Remove test script after a short delay
-          setTimeout(() => {
-            if (testScript.parentNode) {
-              document.head.removeChild(testScript);
-            }
-          }, 3000);
-        } catch (testError) {
-          console.log('URL test failed:', testError);
         }
         
         // Method 2: Try simple GET without CORS mode
@@ -489,7 +527,7 @@
             <div class="no-quotes">
               <p>✅ Request sent successfully!</p>
               <p>Due to browser security, we can't display quotes here automatically.</p>
-              <p><a href="https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
+              <p><a href="${CONFIG.GOOGLE_SHEET_URL}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
                 📊 View Your Quotes in Google Sheets →
               </a></p>
               <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
@@ -503,31 +541,11 @@
           console.log('Simple fetch failed:', simpleError);
           
           // Final fallback message
-          quotesContainer.innerHTML = `
-            <div class="error-message">
-              <p>⚠️ Unable to load quotes automatically</p>
-              <p><strong>Your quotes are still being saved successfully!</strong></p>
-              <p><a href="https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
-                📊 View All Quotes in Google Sheets →
-              </a></p>
-              <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; color: #666;">Troubleshooting</summary>
-                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
-                  <p><strong>Check your Google Apps Script:</strong></p>
-                  <ol>
-                    <li>Make sure it's deployed as a web app</li>
-                    <li>Set "Execute as: Me"</li>
-                    <li>Set "Who has access: Anyone"</li>
-                    <li>Use the latest deployment URL</li>
-                  </ol>
-                  <p><strong>Current script URL being used:</strong><br>
-                  <code style="background: #f5f5f5; padding: 2px 4px; word-break: break-all;">
-                    ${url.toString()}
-                  </code></p>
-                </div>
-              </details>
-            </div>
-          `;
+          quotesContainer.innerHTML = createFallbackHTML(
+            '⚠️ Unable to load quotes automatically',
+            'Your quotes are still being saved successfully!',
+            true
+          );
         }
         
       } catch (error) {
@@ -580,22 +598,8 @@
       });
     }
 
-    // Refresh button event listener
-    refreshBtn.addEventListener('click', safeFetchQuotes);
-
     // Load quotes when page loads
-    window.addEventListener('load', () => {
-      // Show initial message instead of trying to load quotes automatically
-      quotesContainer.innerHTML = `
-        <div class="no-quotes">
-          <p>📝 Your quotes are saved to Google Sheets!</p>
-          <p>Click "Refresh Quotes" to try loading them here, or view them directly in your spreadsheet.</p>
-          <p><a href="https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit" target="_blank" style="color: #007bff; text-decoration: none;">
-            🔗 Open Google Sheets →
-          </a></p>
-        </div>
-      `;
-    });
+    window.addEventListener('load', safeFetchQuotes);
 
     // Service Worker Registration for PWA
     if ('serviceWorker' in navigator) {
