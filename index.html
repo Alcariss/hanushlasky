@@ -2,26 +2,260 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Son's Quotes</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" content="Track and save my son's memorable quotes">
+  <meta name="theme-color" content="#007bff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Son's Quotes">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="icon-16.png">
   <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 2rem auto;
-      padding: 1rem;
+    * {
+      box-sizing: border-box;
     }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 1rem;
+      line-height: 1.5;
+      background-color: #f8f9fa;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 2rem;
+      font-size: 1.5rem;
+    }
+    
+    form {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #555;
+    }
+    
     textarea {
       width: 100%;
-      height: 100px;
+      height: 120px;
       margin-bottom: 1rem;
-    }
-    button {
-      padding: 0.5rem 1rem;
+      padding: 0.75rem;
+      border: 2px solid #e1e5e9;
+      border-radius: 6px;
+      font-family: inherit;
       font-size: 1rem;
+      resize: vertical;
+      transition: border-color 0.2s ease;
     }
+    
+    textarea:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+    
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 600;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    
+    button:hover {
+      background-color: #0056b3;
+    }
+    
+    button:active {
+      transform: translateY(1px);
+    }
+    
     .status {
       margin-top: 1rem;
+      padding: 0.75rem;
+      text-align: center;
+      border-radius: 6px;
+      font-weight: 500;
       color: green;
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .quotes-section {
+      margin-top: 2rem;
+    }
+    
+    .quotes-section h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+    }
+    
+    #refreshBtn {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 1rem;
+      transition: background-color 0.2s ease;
+    }
+    
+    #refreshBtn:hover {
+      background-color: #545b62;
+    }
+    
+    #quotesContainer {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e1e5e9;
+      border-radius: 6px;
+      background: white;
+    }
+    
+    .quote-item {
+      padding: 1rem;
+      border-bottom: 1px solid #f1f3f4;
+      transition: background-color 0.2s ease;
+    }
+    
+    .quote-item:last-child {
+      border-bottom: none;
+    }
+    
+    .quote-item:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .quote-text {
+      font-style: italic;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+      color: #333;
+    }
+    
+    .quote-date {
+      font-size: 0.85rem;
+      color: #666;
+      font-weight: 500;
+    }
+    
+    .loading, .error-message {
+      padding: 2rem;
+      text-align: center;
+      color: #666;
+      font-style: italic;
+    }
+    
+    .error-message {
+      color: #dc3545;
+    }
+    
+    .no-quotes {
+      padding: 2rem;
+      text-align: center;
+      color: #666;
+      font-style: italic;
+    }
+    
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+      body {
+        padding: 0.75rem;
+        margin: 0;
+      }
+      
+      h1 {
+        font-size: 1.25rem;
+        margin-bottom: 1.5rem;
+      }
+      
+      form {
+        padding: 1rem;
+      }
+      
+      textarea {
+        height: 100px;
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+      
+      button {
+        padding: 0.875rem;
+        font-size: 1.125rem;
+      }
+      
+      .quotes-section h2 {
+        font-size: 1.1rem;
+      }
+      
+      #quotesContainer {
+        max-height: 300px;
+      }
+      
+      .quote-item {
+        padding: 0.75rem;
+      }
+    }
+    
+    /* Extra small screens */
+    @media (max-width: 480px) {
+      body {
+        padding: 0.5rem;
+      }
+      
+      h1 {
+        font-size: 1.1rem;
+      }
+      
+      form {
+        padding: 0.75rem;
+      }
+      
+      .quotes-section h2 {
+        font-size: 1rem;
+      }
+      
+      #quotesContainer {
+        max-height: 250px;
+      }
+      
+      .quote-item {
+        padding: 0.5rem;
+      }
+      
+      .quote-text {
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
@@ -34,9 +268,19 @@
   </form>
   <div class="status" id="status"></div>
 
+  <div class="quotes-section">
+    <h2>Recent Quotes</h2>
+    <button id="refreshBtn" type="button">Refresh Quotes</button>
+    <div id="quotesContainer">
+      <div class="loading">Loading quotes...</div>
+    </div>
+  </div>
+
   <script>
     const form = document.getElementById('quoteForm');
     const status = document.getElementById('status');
+    const quotesContainer = document.getElementById('quotesContainer');
+    const refreshBtn = document.getElementById('refreshBtn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -106,6 +350,114 @@
         status.style.color = "red";
       }
     });
+
+    // Function to fetch and display quotes
+    async function fetchQuotes() {
+      try {
+        quotesContainer.innerHTML = '<div class="loading">Loading quotes...</div>';
+        
+        // Use GET request to fetch quotes with action parameter
+        const url = new URL('https://script.google.com/macros/s/AKfycbwRHr7vT0SjsQmu6OY90henhKDNIzs6OsOK8vySKXNiLSP_Qk4xquqUmA8MwBhGmhWMqQ/exec');
+        url.searchParams.append('action', 'fetch');
+        
+        console.log('Fetching quotes from:', url.toString());
+        
+        // Try fetch with CORS first
+        try {
+          const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            displayQuotes(data);
+            return;
+          }
+        } catch (corsError) {
+          console.log('CORS fetch failed, using JSONP fallback');
+        }
+        
+        // Fallback to JSONP for fetching data
+        const callbackName = 'quotesCallback' + Date.now();
+        url.searchParams.append('callback', callbackName);
+        
+        return new Promise((resolve, reject) => {
+          window[callbackName] = (data) => {
+            displayQuotes(data);
+            delete window[callbackName];
+            document.head.removeChild(script);
+            resolve();
+          };
+          
+          const script = document.createElement('script');
+          script.src = url.toString();
+          script.onerror = () => {
+            quotesContainer.innerHTML = '<div class="error-message">Failed to load quotes. Please try again.</div>';
+            delete window[callbackName];
+            document.head.removeChild(script);
+            reject();
+          };
+          document.head.appendChild(script);
+        });
+        
+      } catch (error) {
+        console.error('Error fetching quotes:', error);
+        quotesContainer.innerHTML = '<div class="error-message">Failed to load quotes. Please try again.</div>';
+      }
+    }
+
+    // Function to display quotes in the container
+    function displayQuotes(quotes) {
+      if (!quotes || quotes.length === 0) {
+        quotesContainer.innerHTML = '<div class="no-quotes">No quotes found. Add your first quote above!</div>';
+        return;
+      }
+      
+      const quotesHTML = quotes.map(quote => `
+        <div class="quote-item">
+          <div class="quote-text">"${escapeHtml(quote.text)}"</div>
+          <div class="quote-date">${formatDate(quote.date)}</div>
+        </div>
+      `).join('');
+      
+      quotesContainer.innerHTML = quotesHTML;
+    }
+
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Helper function to format date
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+
+    // Refresh button event listener
+    refreshBtn.addEventListener('click', fetchQuotes);
+
+    // Load quotes when page loads
+    window.addEventListener('load', fetchQuotes);
+
+    // Service Worker Registration for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('sw.js');
+          console.log('Service Worker registered successfully:', registration.scope);
+        } catch (error) {
+          console.log('Service Worker registration failed:', error);
+        }
+      });
+    }
   </script>
 </body>
 </html>
