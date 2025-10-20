@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sons-quotes-v4';
+const CACHE_NAME = 'sons-quotes-v5';
 
 // Get the current script location to build correct URLs
 const baseUrl = self.location.pathname.replace('sw.js', '');
@@ -6,7 +6,7 @@ const urlsToCache = [
   baseUrl,
   `${baseUrl}index.html`,
   `${baseUrl}manifest.json`
-  // Note: Only cache essential files to avoid 404 errors for missing icons
+  // Note: Only cache essential files that actually exist
 ];
 
 // Install Service Worker
