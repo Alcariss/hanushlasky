@@ -1,7 +1,7 @@
-const CACHE_NAME = 'sons-quotes-v3';
+const CACHE_NAME = 'sons-quotes-v4';
 
 // Get the current script location to build correct URLs
-const baseUrl = self.location.pathname.replace('/sw.js', '/');
+const baseUrl = self.location.pathname.replace('sw.js', '');
 const urlsToCache = [
   baseUrl,
   `${baseUrl}index.html`,

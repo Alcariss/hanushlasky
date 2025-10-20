@@ -320,6 +320,9 @@
           status.style.color = "green";
           form.reset();
           
+          // Refresh quotes after saving
+          setTimeout(() => fetchQuotes(), 1000);
+          
         } catch (fetchError) {
           console.warn('Fetch failed, trying image fallback:', fetchError);
           
@@ -330,6 +333,9 @@
             status.textContent = "Quote saved successfully!";
             status.style.color = "green";
             form.reset();
+            
+            // Refresh quotes after saving
+            setTimeout(() => fetchQuotes(), 1000);
           };
           img.onerror = () => {
             console.log('Image method completed (expected error)');
@@ -337,6 +343,9 @@
             status.textContent = "Quote saved successfully!";
             status.style.color = "green";
             form.reset();
+            
+            // Refresh quotes after saving
+            setTimeout(() => fetchQuotes(), 1000);
           };
           
           // Add a timestamp to prevent caching
