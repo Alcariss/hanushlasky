@@ -372,11 +372,15 @@
         
         // Method 1: Try JSONP approach (most reliable for Google Apps Script)
         console.log('Attempting JSONP approach...');
+        console.log('Original URL:', url.toString());
         
         try {
           const jsonpUrl = new URL(url);
           const callbackName = 'quotesCallback' + Date.now();
           jsonpUrl.searchParams.set('callback', callbackName);
+          
+          console.log('JSONP URL:', jsonpUrl.toString());
+          console.log('Callback function name:', callbackName);
           
           const jsonpPromise = new Promise((resolve, reject) => {
             // Set up callback function
@@ -425,12 +429,15 @@
               resolve(data);
             };
             
-            script.onerror = () => {
+            script.onerror = (error) => {
               console.log('JSONP script failed to load');
+              console.log('Script error event:', error);
+              console.log('Script src that failed:', script.src);
               cleanupWithTimeout();
               reject(new Error('JSONP script loading failed'));
             };
             
+            console.log('Adding JSONP script to head...');
             document.head.appendChild(script);
           });
           
@@ -440,6 +447,32 @@
           
         } catch (jsonpError) {
           console.log('JSONP failed:', jsonpError);
+        }
+        
+        // Method 1.5: Test if the Google Apps Script URL is accessible at all
+        console.log('Testing basic script accessibility...');
+        try {
+          // Test with a simple script tag without callback to see if URL is reachable
+          const testScript = document.createElement('script');
+          testScript.src = url.toString();
+          testScript.onerror = () => {
+            console.log('❌ Google Apps Script URL is not accessible');
+            console.log('This suggests the script URL may be incorrect or the deployment has issues');
+          };
+          testScript.onload = () => {
+            console.log('✅ Google Apps Script URL is accessible (but may not support JSONP)');
+            document.head.removeChild(testScript);
+          };
+          document.head.appendChild(testScript);
+          
+          // Remove test script after a short delay
+          setTimeout(() => {
+            if (testScript.parentNode) {
+              document.head.removeChild(testScript);
+            }
+          }, 3000);
+        } catch (testError) {
+          console.log('URL test failed:', testError);
         }
         
         // Method 2: Try simple GET without CORS mode
@@ -473,17 +506,25 @@
           quotesContainer.innerHTML = `
             <div class="error-message">
               <p>⚠️ Unable to load quotes automatically</p>
-              <p>This is due to browser security restrictions with cross-origin requests.</p>
               <p><strong>Your quotes are still being saved successfully!</strong></p>
               <p><a href="https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
                 📊 View All Quotes in Google Sheets →
               </a></p>
               <details style="margin-top: 10px;">
-                <summary style="cursor: pointer; color: #666;">Why this happens</summary>
-                <p style="font-size: 0.9em; color: #666; margin-top: 5px;">
-                  GitHub Pages and Google Apps Script have security restrictions that prevent 
-                  automatic data loading. This is normal and doesn't affect saving quotes.
-                </p>
+                <summary style="cursor: pointer; color: #666;">Troubleshooting</summary>
+                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                  <p><strong>Check your Google Apps Script:</strong></p>
+                  <ol>
+                    <li>Make sure it's deployed as a web app</li>
+                    <li>Set "Execute as: Me"</li>
+                    <li>Set "Who has access: Anyone"</li>
+                    <li>Use the latest deployment URL</li>
+                  </ol>
+                  <p><strong>Current script URL being used:</strong><br>
+                  <code style="background: #f5f5f5; padding: 2px 4px; word-break: break-all;">
+                    ${url.toString()}
+                  </code></p>
+                </div>
               </details>
             </div>
           `;
