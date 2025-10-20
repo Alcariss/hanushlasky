@@ -298,7 +298,7 @@
         status.style.color = "blue";
         
         // Use GET request with URL parameters to bypass CORS
-        const url = new URL('https://script.google.com/macros/s/AKfycbwRHr7vT0SjsQmu6OY90henhKDNIzs6OsOK8vySKXNiLSP_Qk4xquqUmA8MwBhGmhWMqQ/exec');
+        const url = new URL('https://script.google.com/macros/s/AKfycbwBO8W5FPkHfRPAU2HXEGLjpRgya3du1Joel3jxVyzQSh-rmcreBC4oTZgqbH62Vr3K/exec');
         url.searchParams.append('date', data.Date);
         url.searchParams.append('quote', data.Quote);
         
@@ -365,7 +365,7 @@
         quotesContainer.innerHTML = '<div class="loading">Loading quotes...</div>';
         
         // Use GET request to fetch quotes with action parameter
-        const url = new URL('https://script.google.com/macros/s/AKfycbwRHr7vT0SjsQmu6OY90henhKDNIzs6OsOK8vySKXNiLSP_Qk4xquqUmA8MwBhGmhWMqQ/exec');
+        const url = new URL('https://script.google.com/macros/s/AKfycbwBO8W5FPkHfRPAU2HXEGLjpRgya3du1Joel3jxVyzQSh-rmcreBC4oTZgqbH62Vr3K/exec');
         url.searchParams.append('action', 'fetch');
         
         console.log('Fetching quotes from:', url.toString());
