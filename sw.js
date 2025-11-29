@@ -1,118 +1,134 @@
-const CACHE_NAME = 'sons-quotes-v5';
-
-// Get the current script location to build correct URLs
-const baseUrl = self.location.pathname.replace('sw.js', '');
+const CACHE_NAME = 'citaty-syna-v1.0'; // Modern styling with Czech translation
+const APP_VERSION = '1.0.0'; // Modern styling with Czech translation
 const urlsToCache = [
-  baseUrl,
-  `${baseUrl}index.html`,
-  `${baseUrl}manifest.json`
-  // Note: Only cache essential files that actually exist
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Install Service Worker
-self.addEventListener('install', (event) => {
-  console.log('Service Worker installing...');
+// iOS-specific: Detect if running as standalone app
+const isStandalone = () => {
+  return window.matchMedia('(display-mode: standalone)').matches || 
+         window.navigator.standalone === true;
+};
+
+// Install event - cache resources
+self.addEventListener('install', event => {
+  console.log('Service Worker installing... Version:', APP_VERSION);
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(async (cache) => {
-        console.log('Opened cache');
-        // Cache files individually to avoid failing on missing resources
-        const cachePromises = urlsToCache.map(async (url) => {
-          try {
-            await cache.add(url);
-            console.log('Cached:', url);
-          } catch (error) {
-            console.warn('Failed to cache:', url, error);
-            // Continue with other files even if one fails
-          }
-        });
-        
-        await Promise.allSettled(cachePromises);
-        console.log('Cache setup complete');
+      .then(cache => {
+        console.log('Opened cache:', CACHE_NAME);
+        return cache.addAll(urlsToCache);
       })
-      .catch((error) => {
-        console.log('Cache setup failed:', error);
-        // Don't fail installation
-        return Promise.resolve();
+      .catch(error => {
+        console.error('Failed to cache resources:', error);
       })
   );
+  // Force the waiting service worker to become the active service worker
+  // This is more aggressive for iOS PWAs
+  self.skipWaiting();
 });
 
-// Fetch Event - Network First Strategy for the main app
-self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // Skip external requests (like Google Apps Script)
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
-
+// Fetch event - serve from cache when offline
+self.addEventListener('fetch', event => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
+  
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // If we got a valid response, clone and cache it
-        if (response.status === 200) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+    caches.match(event.request)
+      .then(response => {
+        // Cache hit - return response
+        if (response) {
+          return response;
         }
-        return response;
-      })
-      .catch(() => {
-        // Network failed, try to get from cache
-        return caches.match(event.request)
-          .then((response) => {
-            if (response) {
-              return response;
+        
+        // Network request with fallback
+        return fetch(event.request)
+          .then(fetchResponse => {
+            // Check if valid response
+            if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
+              return fetchResponse;
             }
-            // If not in cache and it's the main page, return index.html
-            if (event.request.mode === 'navigate') {
-              return caches.match(`${baseUrl}index.html`) || caches.match(baseUrl);
+            
+            // Clone response for caching
+            const responseToCache = fetchResponse.clone();
+            
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                cache.put(event.request, responseToCache);
+              });
+            
+            return fetchResponse;
+          })
+          .catch(() => {
+            // Return cached index.html for navigation requests when offline
+            if (event.request.destination === 'document') {
+              return caches.match('./index.html');
             }
-            throw new Error('No cached version available');
           });
       })
   );
 });
 
-// Activate Service Worker
-self.addEventListener('activate', (event) => {
-  console.log('Service Worker activating...');
+// Activate event - clean up old caches and handle updates
+self.addEventListener('activate', event => {
+  console.log('Service Worker activating... Version:', APP_VERSION);
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
+        cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
             console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
+    }).then(() => {
+      console.log('Service Worker activated, claiming clients');
+      // Claim all clients immediately
+      return self.clients.claim();
     })
   );
 });
 
-// Handle background sync for offline quote saving (optional enhancement)
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'save-quote') {
-    console.log('Background sync triggered for saving quote');
-    // You could implement offline quote queuing here
+// Handle messages from main app
+self.addEventListener('message', event => {
+  console.log('Service worker received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('SKIP_WAITING message received, activating new service worker');
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({
+      type: 'VERSION_INFO',
+      version: APP_VERSION,
+      cacheName: CACHE_NAME
+    });
   }
 });
 
-// Handle push notifications (future enhancement)
+// Handle background sync for offline quote saving
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'save-quote') {
+    console.log('Background sync triggered for saving quote');
+    // Could implement offline quote queuing here
+  }
+});
+
+// Handle push notifications
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json();
     const options = {
       body: data.body,
-      icon: '/icon-192.png',
-      badge: '/icon-32.png'
+      icon: './icon-192.png',
+      badge: './icon-192.png'
     };
     
     event.waitUntil(

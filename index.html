@@ -249,6 +249,42 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Version Display */
+    .version-info {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+
+    .version-info:hover {
+      background: rgba(102, 126, 234, 0.9);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+    }
+
+    .version-info.updating {
+      background: #ed8936;
+      color: white;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
       .container {
@@ -309,6 +345,13 @@
       .quote-text {
         font-size: 1rem;
       }
+      
+      .version-info {
+        bottom: 10px;
+        right: 10px;
+        font-size: 0.75rem;
+        padding: 6px 10px;
+      }
     }
   </style>
 </head>
@@ -344,6 +387,11 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Version Info -->
+  <div id="versionInfo" class="version-info" title="Klikněte pro aktualizaci">
+    v1.0.0
   </div>
 
   <script>
@@ -647,6 +695,95 @@
     // Load quotes when page loads
     window.addEventListener('load', safeFetchQuotes);
 
+    // Version management and PWA update functionality
+    let serviceWorkerRegistration = null;
+    let isUpdateAvailable = false;
+
+    // iOS-specific: Detect if running as standalone app
+    const isStandalone = () => {
+      return window.matchMedia('(display-mode: standalone)').matches || 
+             window.navigator.standalone === true;
+    };
+
+    // Check for service worker updates
+    function checkForUpdates() {
+      if (serviceWorkerRegistration) {
+        serviceWorkerRegistration.update();
+      }
+    }
+
+    // Force update the app (especially useful for iOS PWA)
+    function forceAppUpdate() {
+      const versionElement = document.getElementById('versionInfo');
+      if (versionElement) {
+        versionElement.textContent = 'Aktualizace...';
+        versionElement.classList.add('updating');
+      }
+
+      if ('serviceWorker' in navigator && serviceWorkerRegistration) {
+        // For iOS PWAs, we need to be more aggressive
+        if (isStandalone()) {
+          // Clear all caches
+          caches.keys().then(names => {
+            names.forEach(name => {
+              caches.delete(name);
+            });
+          });
+          
+          // Send skip waiting message
+          if (serviceWorkerRegistration.waiting) {
+            serviceWorkerRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+          
+          // Force reload after a short delay
+          setTimeout(() => {
+            window.location.reload(true);
+          }, 500);
+        } else {
+          // Regular browser - standard update flow
+          if (serviceWorkerRegistration.waiting) {
+            serviceWorkerRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            window.location.reload();
+          } else {
+            checkForUpdates();
+            setTimeout(() => window.location.reload(), 1000);
+          }
+        }
+      } else {
+        // Fallback: hard reload
+        window.location.reload(true);
+      }
+    }
+
+    // Get version from service worker
+    function getAppVersion() {
+      if ('serviceWorker' in navigator && serviceWorkerRegistration) {
+        const messageChannel = new MessageChannel();
+        messageChannel.port1.onmessage = (event) => {
+          if (event.data && event.data.type === 'VERSION_INFO') {
+            const versionElement = document.getElementById('versionInfo');
+            if (versionElement) {
+              versionElement.textContent = `v${event.data.version}`;
+            }
+          }
+        };
+        
+        if (serviceWorkerRegistration.active) {
+          serviceWorkerRegistration.active.postMessage(
+            { type: 'GET_VERSION' }, 
+            [messageChannel.port2]
+          );
+        }
+      }
+    }
+
+    // Handle version info click
+    document.getElementById('versionInfo').addEventListener('click', () => {
+      if (confirm('Chcete aktualizovat aplikaci na nejnovější verzi?')) {
+        forceAppUpdate();
+      }
+    });
+
     // Service Worker Registration for PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
@@ -656,7 +793,45 @@
           const registration = await navigator.serviceWorker.register(swPath, {
             scope: './'
           });
+          
+          serviceWorkerRegistration = registration;
           console.log('Service Worker registered successfully:', registration.scope);
+          
+          // Get initial version
+          setTimeout(getAppVersion, 100);
+          
+          // Listen for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('New service worker found');
+            
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('New service worker installed, update available');
+                isUpdateAvailable = true;
+                
+                // Update version display to show update available
+                const versionElement = document.getElementById('versionInfo');
+                if (versionElement) {
+                  versionElement.textContent = '🔄 Aktualizace k dispozici';
+                  versionElement.style.background = 'rgba(237, 137, 54, 0.9)';
+                  versionElement.style.color = 'white';
+                  versionElement.title = 'Klikněte pro aktualizaci na novou verzi';
+                }
+              }
+            });
+          });
+          
+          // Handle service worker updates
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+              refreshing = true;
+              console.log('Service worker controller changed, reloading...');
+              window.location.reload();
+            }
+          });
+          
         } catch (error) {
           console.log('Service Worker registration failed:', error);
           // Don't let SW failure break the app - it will still work without offline features
