@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Son's Quotes</title>
+  <title>Citáty mého syna</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Track and save my son's memorable quotes">
+  <meta name="description" content="Sledování a ukládání nezapomenutelných citátů mého syna">
   <meta name="theme-color" content="#007bff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Son's Quotes">
+  <meta name="apple-mobile-web-app-title" content="Synovy citáty">
   
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
@@ -315,32 +315,32 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>Track My Son's Quotes</h1>
+      <h1>Citáty mého syna</h1>
     </div>
     
     <div class="form-container">
       <form id="quoteForm">
         <div class="form-group">
-          <label for="quote">Quote:</label>
+          <label for="quote">Citát:</label>
           <textarea id="quote" name="quote" required></textarea>
         </div>
         
         <div class="form-group">
-          <label for="quoteDate">Date:</label>
+          <label for="quoteDate">Datum:</label>
           <input type="date" id="quoteDate" name="quoteDate" required>
         </div>
         
-        <button type="submit" class="btn btn-primary">Save Quote</button>
+        <button type="submit" class="btn btn-primary">Uložit citát</button>
       </form>
       <div class="status" id="status"></div>
     </div>
 
     <div class="quotes-section">
-      <h2>Recent Quotes</h2>
+      <h2>Nejnovější citáty</h2>
       <div id="quotesContainer">
         <div class="loading">
           <div class="spinner"></div>
-          Loading quotes...
+          Načítání citátů...
         </div>
       </div>
     </div>
@@ -392,7 +392,7 @@
         mode: 'no-cors'
       });
       console.log('Fetch completed successfully');
-      showStatus("Quote saved successfully!", "success");
+      showStatus("Citát byl úspěšně uložen!", "success");
       resetFormAndRefresh();
     }
     
@@ -402,14 +402,14 @@
         const img = new Image();
         img.onload = () => {
           console.log('Image method succeeded');
-          showStatus("Quote saved successfully!", "success");
+          showStatus("Citát byl úspěšně uložen!", "success");
           resetFormAndRefresh();
           resolve();
         };
         img.onerror = () => {
           console.log('Image method completed (expected error)');
           // Even on "error", the request was likely sent
-          showStatus("Quote saved successfully!", "success");
+          showStatus("Citát byl úspěšně uložen!", "success");
           resetFormAndRefresh();
           resolve();
         };
@@ -446,7 +446,7 @@
           <p>${title}</p>
           <p><strong>${message}</strong></p>
           <p><a href="${CONFIG.GOOGLE_SHEET_URL}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
-            📊 View All Quotes in Google Sheets →
+            📊 Zobrazit všechny citáty v Google Sheets →
           </a></p>
           ${troubleshootingSection}
         </div>
@@ -460,7 +460,7 @@
       
       if (!quote) return;
       if (!selectedDate) {
-        showStatus("Please select a date.", "error");
+        showStatus("Prosím vyberte datum.", "error");
         return;
       }
 
@@ -470,7 +470,7 @@
       };
 
       try {
-        showStatus("Saving quote...", "info");
+        showStatus("Ukládání citátu...", "info");
         
         // Use GET request with URL parameters to bypass CORS
         const url = new URL(CONFIG.SCRIPT_URL);
@@ -490,14 +490,14 @@
         
       } catch (error) {
         console.error('All methods failed:', error);
-        showStatus(`Error connecting to the server: ${error.message}`, "error");
+        showStatus(`Chyba při připojení k serveru: ${error.message}`, "error");
       }
     });
 
     // Function to fetch and display quotes
     async function fetchQuotes() {
       try {
-        quotesContainer.innerHTML = '<div class="loading"><div class="spinner"></div>Loading quotes...</div>';
+        quotesContainer.innerHTML = '<div class="loading"><div class="spinner"></div>Načítání citátů...</div>';
         
         // Use GET request to fetch quotes with action parameter
         const url = new URL(CONFIG.SCRIPT_URL);
@@ -571,14 +571,14 @@
           // With no-cors we can't read the response, but show a helpful message
           quotesContainer.innerHTML = `
             <div class="no-quotes">
-              <p>✅ Request sent successfully!</p>
-              <p>Due to browser security, we can't display quotes here automatically.</p>
+              <p>✅ Požadavek byl úspěšně odeslán!</p>
+              <p>Kvůli zabezpečení prohlížeče zde nemůžeme automaticky zobrazit citáty.</p>
               <p><a href="${CONFIG.GOOGLE_SHEET_URL}" target="_blank" style="color: #007bff; text-decoration: none; font-weight: bold;">
-                📊 View Your Quotes in Google Sheets →
+                📊 Zobrazit vaše citáty v Google Sheets →
               </a></p>
               <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                <strong>Good news:</strong> Your quotes are being saved perfectly! 
-                You can always view them in the Google Sheet above.
+                <strong>Dobrá zpráva:</strong> Vaše citáty se ukládají perfektně! 
+                Vždy je můžete zobrazit v Google Sheetu výše.
               </p>
             </div>
           `;
@@ -596,7 +596,7 @@
         
       } catch (error) {
         console.error('Error fetching quotes:', error);
-        quotesContainer.innerHTML = '<div class="error-message">Failed to load quotes. Please try again.</div>';
+        quotesContainer.innerHTML = '<div class="error-message">Načítání citátů selhalo. Zkuste to prosím znovu.</div>';
       }
     }
     
@@ -613,7 +613,7 @@
     // Function to display quotes in the container
     function displayQuotes(quotes) {
       if (!quotes || quotes.length === 0) {
-        quotesContainer.innerHTML = '<div class="no-quotes">No quotes found. Add your first quote above!</div>';
+        quotesContainer.innerHTML = '<div class="no-quotes">Nebyly nalezeny žádné citáty. Přidejte svůj první citát výše!</div>';
         return;
       }
       
@@ -637,7 +637,7 @@
     // Helper function to format date
     function formatDate(dateString) {
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
+      return date.toLocaleDateString('cs-CZ', { 
         year: 'numeric', 
         month: 'short', 
         day: 'numeric' 
