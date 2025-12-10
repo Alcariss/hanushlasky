@@ -183,22 +183,34 @@ function deleteQuote(params) {
     
     // Get the quote at the display index
     const targetQuote = allQuotes[index];
-    const actualRowIndex = targetQuote.originalRow;
+    const targetDate = targetQuote.date;
+    const targetText = targetQuote.text;
     
     Logger.log('Delete operation - Target quote: ' + JSON.stringify(targetQuote));
-    Logger.log('Delete operation - Will delete row: ' + actualRowIndex);
     
-    // Delete the specific row
-    sheet.deleteRow(actualRowIndex);
+    // Find and delete by matching content instead of row index
+    // This is more reliable as it doesn't depend on row positioning
+    const allData = sheet.getDataRange().getValues();
+    for (let i = 1; i < allData.length; i++) { // Skip header
+      if (allData[i][0].toString() === targetDate.toString() && allData[i][1] === targetText) {
+        const rowToDelete = i + 1; // 1-based row number
+        Logger.log('Delete operation - Found matching quote at row: ' + rowToDelete);
+        sheet.deleteRow(rowToDelete);
+        
+        Logger.log('Quote deleted successfully at display index: ' + index + ', deleted row: ' + rowToDelete);
+        return { 
+          success: true, 
+          message: 'Quote deleted successfully',
+          index: index,
+          deletedRow: rowToDelete,
+          deletedQuote: targetText,
+          deletedDate: targetDate
+        };
+      }
+    }
     
-    Logger.log('Quote deleted successfully at display index: ' + index + ', actual row: ' + actualRowIndex);
-    return { 
-      success: true, 
-      message: 'Quote deleted successfully',
-      index: index,
-      actualRow: actualRowIndex,
-      deletedQuote: targetQuote.text
-    };
+    // If we get here, the quote wasn't found
+    throw new Error('Quote not found for deletion');
     
   } catch (error) {
     Logger.log('Error deleting quote: ' + error.toString());
