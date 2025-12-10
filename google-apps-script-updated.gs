@@ -95,17 +95,31 @@ function editQuote(params) {
     // Get all data
     const data = sheet.getDataRange().getValues();
     
-    // Skip header row, so actual data starts at index 1
-    const actualRowIndex = index + 2; // +1 for header, +1 for 1-based indexing
+    if (data.length <= 1) {
+      throw new Error('No quotes to edit');
+    }
     
-    if (actualRowIndex > data.length) {
+    // Get the sorted quotes (same as getQuotes function)
+    const quotes = data.slice(1).map((row, originalIndex) => ({
+      date: row[0],
+      text: row[1],
+      originalRowIndex: originalIndex + 2 // +1 for header, +1 for 1-based indexing
+    }));
+    
+    // Sort by date descending (newest first) - same as display order
+    quotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if (index >= quotes.length) {
       throw new Error('Quote index out of range');
     }
+    
+    // Get the actual row index from the sorted array
+    const actualRowIndex = quotes[index].originalRowIndex;
     
     // Update the specific row
     sheet.getRange(actualRowIndex, 1, 1, 2).setValues([[newDate, newQuote]]);
     
-    Logger.log('Quote edited successfully at index: ' + index);
+    Logger.log('Quote edited successfully at display index: ' + index + ', actual row: ' + actualRowIndex);
     return { 
       success: true, 
       message: 'Quote edited successfully',
@@ -130,17 +144,31 @@ function deleteQuote(params) {
     // Get all data
     const data = sheet.getDataRange().getValues();
     
-    // Skip header row, so actual data starts at index 1
-    const actualRowIndex = index + 2; // +1 for header, +1 for 1-based indexing
+    if (data.length <= 1) {
+      throw new Error('No quotes to delete');
+    }
     
-    if (actualRowIndex > data.length) {
+    // Get the sorted quotes (same as getQuotes function)
+    const quotes = data.slice(1).map((row, originalIndex) => ({
+      date: row[0],
+      text: row[1],
+      originalRowIndex: originalIndex + 2 // +1 for header, +1 for 1-based indexing
+    }));
+    
+    // Sort by date descending (newest first) - same as display order
+    quotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if (index >= quotes.length) {
       throw new Error('Quote index out of range');
     }
+    
+    // Get the actual row index from the sorted array
+    const actualRowIndex = quotes[index].originalRowIndex;
     
     // Delete the specific row
     sheet.deleteRow(actualRowIndex);
     
-    Logger.log('Quote deleted successfully at index: ' + index);
+    Logger.log('Quote deleted successfully at display index: ' + index + ', actual row: ' + actualRowIndex);
     return { 
       success: true, 
       message: 'Quote deleted successfully',

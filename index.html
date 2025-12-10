@@ -528,7 +528,7 @@
 
   <!-- Version Info -->
   <div id="versionInfo" class="version-info" title="Klikněte pro aktualizaci">
-    v1.1.0
+    v1.2.0
   </div>
 
   <script>
@@ -967,6 +967,9 @@
     // Perform delete quote operation
     async function performDeleteQuote(index) {
       try {
+        console.log('Starting delete operation for index:', index);
+        console.log('Quote to delete:', currentQuotes[index]);
+        
         showModalStatus('deleteStatus', 'Mazání citátu...', 'info');
         
         const url = new URL(CONFIG.SCRIPT_URL);
@@ -977,7 +980,7 @@
         
         // Try fetch approach first
         try {
-          await fetch(url, {
+          const response = await fetch(url, {
             method: 'GET',
             mode: 'no-cors'
           });
@@ -987,7 +990,10 @@
           // Fallback: Use image loading technique
           await new Promise((resolve) => {
             const img = new Image();
-            img.onload = img.onerror = () => resolve();
+            img.onload = img.onerror = () => {
+              console.log('Delete image fallback completed');
+              resolve();
+            };
             img.src = url.toString() + '&_t=' + Date.now();
           });
         }
