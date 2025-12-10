@@ -925,6 +925,13 @@
     // Perform edit quote operation
     async function performEditQuote(index, newText, newDate) {
       try {
+        console.log('=== EDIT OPERATION START ===');
+        console.log('Edit index:', index);
+        console.log('Current quotes array:', currentQuotes);
+        console.log('Quote to edit:', currentQuotes[index]);
+        console.log('New text:', newText);
+        console.log('New date:', newDate);
+        
         showModalStatus('editStatus', 'Ukládání změn...', 'info');
         
         const url = new URL(CONFIG.SCRIPT_URL);
@@ -933,11 +940,11 @@
         url.searchParams.append('date', newDate);
         url.searchParams.append('quote', newText);
         
-        console.log('Editing quote:', url.toString());
+        console.log('Edit URL:', url.toString());
         
         // Try fetch approach first
         try {
-          await fetch(url, {
+          const response = await fetch(url, {
             method: 'GET',
             mode: 'no-cors'
           });
@@ -947,12 +954,16 @@
           // Fallback: Use image loading technique
           await new Promise((resolve) => {
             const img = new Image();
-            img.onload = img.onerror = () => resolve();
+            img.onload = img.onerror = () => {
+              console.log('Edit image fallback completed');
+              resolve();
+            };
             img.src = url.toString() + '&_t=' + Date.now();
           });
         }
         
         showModalStatus('editStatus', 'Změny byly úspěšně uloženy!', 'success');
+        console.log('=== EDIT OPERATION END ===');
         setTimeout(() => {
           closeEditModal();
           safeFetchQuotes();

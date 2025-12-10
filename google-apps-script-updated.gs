@@ -99,22 +99,32 @@ function editQuote(params) {
       throw new Error('No quotes to edit');
     }
     
-    // Get the sorted quotes (same as getQuotes function)
-    const quotes = data.slice(1).map((row, originalIndex) => ({
-      date: row[0],
-      text: row[1],
-      originalRowIndex: originalIndex + 2 // +1 for header, +1 for 1-based indexing
-    }));
-    
-    // Sort by date descending (newest first) - same as display order
-    quotes.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    if (index >= quotes.length) {
-      throw new Error('Quote index out of range');
+    // Create array of quotes with their original row numbers
+    const allQuotes = [];
+    for (let i = 1; i < data.length; i++) { // Skip header row
+      allQuotes.push({
+        date: data[i][0],
+        text: data[i][1],
+        originalRow: i + 1 // 1-based row number
+      });
     }
     
-    // Get the actual row index from the sorted array
-    const actualRowIndex = quotes[index].originalRowIndex;
+    // Sort by date descending (newest first) - same as display order
+    allQuotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    Logger.log('Edit operation - Total quotes after sorting: ' + allQuotes.length);
+    Logger.log('Edit operation - Requested index: ' + index);
+    
+    if (index >= allQuotes.length) {
+      throw new Error('Quote index ' + index + ' out of range (max: ' + (allQuotes.length - 1) + ')');
+    }
+    
+    // Get the quote at the display index
+    const targetQuote = allQuotes[index];
+    const actualRowIndex = targetQuote.originalRow;
+    
+    Logger.log('Edit operation - Target quote: ' + JSON.stringify(targetQuote));
+    Logger.log('Edit operation - Will update row: ' + actualRowIndex);
     
     // Update the specific row
     sheet.getRange(actualRowIndex, 1, 1, 2).setValues([[newDate, newQuote]]);
@@ -123,7 +133,10 @@ function editQuote(params) {
     return { 
       success: true, 
       message: 'Quote edited successfully',
-      index: index
+      index: index,
+      actualRow: actualRowIndex,
+      oldQuote: targetQuote.text,
+      newQuote: newQuote
     };
     
   } catch (error) {
@@ -148,22 +161,32 @@ function deleteQuote(params) {
       throw new Error('No quotes to delete');
     }
     
-    // Get the sorted quotes (same as getQuotes function)
-    const quotes = data.slice(1).map((row, originalIndex) => ({
-      date: row[0],
-      text: row[1],
-      originalRowIndex: originalIndex + 2 // +1 for header, +1 for 1-based indexing
-    }));
-    
-    // Sort by date descending (newest first) - same as display order
-    quotes.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    if (index >= quotes.length) {
-      throw new Error('Quote index out of range');
+    // Create array of quotes with their original row numbers
+    const allQuotes = [];
+    for (let i = 1; i < data.length; i++) { // Skip header row
+      allQuotes.push({
+        date: data[i][0],
+        text: data[i][1],
+        originalRow: i + 1 // 1-based row number
+      });
     }
     
-    // Get the actual row index from the sorted array
-    const actualRowIndex = quotes[index].originalRowIndex;
+    // Sort by date descending (newest first) - same as display order
+    allQuotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    Logger.log('Delete operation - Total quotes after sorting: ' + allQuotes.length);
+    Logger.log('Delete operation - Requested index: ' + index);
+    
+    if (index >= allQuotes.length) {
+      throw new Error('Quote index ' + index + ' out of range (max: ' + (allQuotes.length - 1) + ')');
+    }
+    
+    // Get the quote at the display index
+    const targetQuote = allQuotes[index];
+    const actualRowIndex = targetQuote.originalRow;
+    
+    Logger.log('Delete operation - Target quote: ' + JSON.stringify(targetQuote));
+    Logger.log('Delete operation - Will delete row: ' + actualRowIndex);
     
     // Delete the specific row
     sheet.deleteRow(actualRowIndex);
@@ -172,7 +195,9 @@ function deleteQuote(params) {
     return { 
       success: true, 
       message: 'Quote deleted successfully',
-      index: index
+      index: index,
+      actualRow: actualRowIndex,
+      deletedQuote: targetQuote.text
     };
     
   } catch (error) {
