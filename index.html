@@ -215,6 +215,105 @@
       font-weight: 500;
     }
 
+    .quote-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .btn-edit {
+      background: #4299e1;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #3182ce;
+      transform: translateY(-1px);
+    }
+
+    .btn-delete {
+      background: #f56565;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #e53e3e;
+      transform: translateY(-1px);
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.2s ease;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      transform: translateY(-20px);
+      transition: transform 0.2s ease;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-overlay.show .modal {
+      transform: translateY(0);
+    }
+
+    .modal h2 {
+      margin: 0 0 20px 0;
+      color: #2d3748;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+      margin-top: 24px;
+    }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+
+    .btn-secondary:hover {
+      background: #cbd5e0;
+    }
+
     /* Loading and Error States */
     .loading, .error-message, .no-quotes {
       padding: 40px;
@@ -386,6 +485,44 @@
           Načítání citátů...
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Edit Quote Modal -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Upravit citát</h2>
+      <form id="editQuoteForm">
+        <div class="form-group">
+          <label for="editQuote">Citát:</label>
+          <textarea id="editQuote" name="editQuote" required></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="editQuoteDate">Datum:</label>
+          <input type="date" id="editQuoteDate" name="editQuoteDate" required>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Zrušit</button>
+          <button type="submit" class="btn btn-primary">Uložit změny</button>
+        </div>
+      </form>
+      <div class="status" id="editStatus"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Smazat citát</h2>
+      <p>Opravdu chcete smazat tento citát?</p>
+      <div class="quote-preview" id="deleteQuotePreview"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Zrušit</button>
+        <button type="button" class="btn btn-delete" onclick="confirmDelete()">Smazat</button>
+      </div>
+      <div class="status" id="deleteStatus"></div>
     </div>
   </div>
 
@@ -660,15 +797,22 @@
 
     // Function to display quotes in the container
     function displayQuotes(quotes) {
+      // Store quotes globally for edit/delete functionality
+      currentQuotes = quotes || [];
+      
       if (!quotes || quotes.length === 0) {
         quotesContainer.innerHTML = '<div class="no-quotes">Nebyly nalezeny žádné citáty. Přidejte svůj první citát výše!</div>';
         return;
       }
       
-      const quotesHTML = quotes.map(quote => `
-        <div class="quote-item">
+      const quotesHTML = quotes.map((quote, index) => `
+        <div class="quote-item" data-index="${index}">
           <div class="quote-text">"${escapeHtml(quote.text)}"</div>
           <div class="quote-date">${formatDate(quote.date)}</div>
+          <div class="quote-actions">
+            <button class="btn-small btn-edit" onclick="editQuote(${index})">Upravit</button>
+            <button class="btn-small btn-delete" onclick="deleteQuote(${index})">Smazat</button>
+          </div>
         </div>
       `).join('');
       
@@ -691,6 +835,212 @@
         day: 'numeric' 
       });
     }
+
+    // Load quotes when page loads
+    window.addEventListener('load', safeFetchQuotes);
+
+    // Global variables for quote management
+    let currentQuotes = [];
+    let editingQuoteIndex = -1;
+    let deletingQuoteIndex = -1;
+
+    // Edit quote functionality
+    function editQuote(index) {
+      if (!currentQuotes[index]) return;
+      
+      editingQuoteIndex = index;
+      const quote = currentQuotes[index];
+      
+      // Populate edit form
+      document.getElementById('editQuote').value = quote.text;
+      document.getElementById('editQuoteDate').value = formatDateForInput(quote.date);
+      
+      // Show modal
+      document.getElementById('editModal').classList.add('show');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('show');
+      editingQuoteIndex = -1;
+      
+      // Clear status
+      const editStatus = document.getElementById('editStatus');
+      editStatus.className = 'status';
+    }
+
+    // Delete quote functionality
+    function deleteQuote(index) {
+      if (!currentQuotes[index]) return;
+      
+      deletingQuoteIndex = index;
+      const quote = currentQuotes[index];
+      
+      // Show quote preview in delete modal
+      document.getElementById('deleteQuotePreview').innerHTML = `
+        <div style="background: #f8fafc; padding: 12px; border-radius: 8px; margin: 16px 0;">
+          <div style="font-style: italic; margin-bottom: 4px;">"${escapeHtml(quote.text)}"</div>
+          <div style="font-size: 0.9rem; color: #718096;">${formatDate(quote.date)}</div>
+        </div>
+      `;
+      
+      // Show modal
+      document.getElementById('deleteModal').classList.add('show');
+    }
+
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('show');
+      deletingQuoteIndex = -1;
+      
+      // Clear status
+      const deleteStatus = document.getElementById('deleteStatus');
+      deleteStatus.className = 'status';
+    }
+
+    function confirmDelete() {
+      if (deletingQuoteIndex === -1) return;
+      
+      performDeleteQuote(deletingQuoteIndex);
+    }
+
+    // Helper function to format date for input field
+    function formatDateForInput(dateString) {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    }
+
+    // Helper function to show status in modal
+    function showModalStatus(elementId, message, type) {
+      const statusElement = document.getElementById(elementId);
+      statusElement.textContent = message;
+      statusElement.className = `status show ${type}`;
+      
+      // Auto-hide success messages
+      if (type === 'success') {
+        setTimeout(() => {
+          statusElement.className = 'status';
+        }, CONFIG.AUTO_HIDE_DELAY);
+      }
+    }
+
+    // Perform edit quote operation
+    async function performEditQuote(index, newText, newDate) {
+      try {
+        showModalStatus('editStatus', 'Ukládání změn...', 'info');
+        
+        const url = new URL(CONFIG.SCRIPT_URL);
+        url.searchParams.append('action', 'edit');
+        url.searchParams.append('index', index.toString());
+        url.searchParams.append('date', newDate);
+        url.searchParams.append('quote', newText);
+        
+        console.log('Editing quote:', url.toString());
+        
+        // Try fetch approach first
+        try {
+          await fetch(url, {
+            method: 'GET',
+            mode: 'no-cors'
+          });
+          console.log('Edit fetch completed successfully');
+        } catch (fetchError) {
+          console.warn('Edit fetch failed, trying image fallback:', fetchError);
+          // Fallback: Use image loading technique
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = img.onerror = () => resolve();
+            img.src = url.toString() + '&_t=' + Date.now();
+          });
+        }
+        
+        showModalStatus('editStatus', 'Změny byly úspěšně uloženy!', 'success');
+        setTimeout(() => {
+          closeEditModal();
+          safeFetchQuotes();
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Edit failed:', error);
+        showModalStatus('editStatus', `Chyba při ukládání: ${error.message}`, 'error');
+      }
+    }
+
+    // Perform delete quote operation
+    async function performDeleteQuote(index) {
+      try {
+        showModalStatus('deleteStatus', 'Mazání citátu...', 'info');
+        
+        const url = new URL(CONFIG.SCRIPT_URL);
+        url.searchParams.append('action', 'delete');
+        url.searchParams.append('index', index.toString());
+        
+        console.log('Deleting quote:', url.toString());
+        
+        // Try fetch approach first
+        try {
+          await fetch(url, {
+            method: 'GET',
+            mode: 'no-cors'
+          });
+          console.log('Delete fetch completed successfully');
+        } catch (fetchError) {
+          console.warn('Delete fetch failed, trying image fallback:', fetchError);
+          // Fallback: Use image loading technique
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = img.onerror = () => resolve();
+            img.src = url.toString() + '&_t=' + Date.now();
+          });
+        }
+        
+        showModalStatus('deleteStatus', 'Citát byl úspěšně smazán!', 'success');
+        setTimeout(() => {
+          closeDeleteModal();
+          safeFetchQuotes();
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Delete failed:', error);
+        showModalStatus('deleteStatus', `Chyba při mazání: ${error.message}`, 'error');
+      }
+    }
+
+    // Edit form submission
+    document.getElementById('editQuoteForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (editingQuoteIndex === -1) return;
+      
+      const newText = document.getElementById('editQuote').value.trim();
+      const newDate = document.getElementById('editQuoteDate').value;
+      
+      if (!newText || !newDate) {
+        showModalStatus('editStatus', 'Prosím vyplňte všechna pole.', 'error');
+        return;
+      }
+      
+      await performEditQuote(editingQuoteIndex, newText, newDate);
+    });
+
+    // Close modals when clicking outside
+    document.getElementById('editModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeEditModal();
+      }
+    });
+
+    document.getElementById('deleteModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) {
+        closeDeleteModal();
+      }
+    });
+
+    // Close modals with Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeEditModal();
+        closeDeleteModal();
+      }
+    });
 
     // Load quotes when page loads
     window.addEventListener('load', safeFetchQuotes);
