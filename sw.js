@@ -1,5 +1,5 @@
-const CACHE_NAME = 'citaty-syna-v1.0'; // Modern styling with Czech translation
-const APP_VERSION = '1.0.0'; // Modern styling with Czech translation
+const CACHE_NAME = 'citaty-syna-v1.1'; // Modern styling with Czech translation
+const APP_VERSION = '1.1.0'; // Modern styling with Czech translation
 const urlsToCache = [
   './',
   './index.html',
