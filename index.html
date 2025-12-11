@@ -1103,10 +1103,40 @@
     let serviceWorkerRegistration = null;
     let isUpdateAvailable = false;
 
-    // Simple update check - just check if there's a new service worker
+    // Detect if running as standalone iOS PWA
+    const isIOSPWA = () => {
+      return window.navigator.standalone === true ||
+             window.matchMedia('(display-mode: standalone)').matches;
+    };
+
+    // Aggressive update check for iOS PWAs
     function checkForUpdates() {
       if (serviceWorkerRegistration) {
+        console.log('Checking for updates...');
         serviceWorkerRegistration.update();
+        
+        // For iOS PWAs, also check more aggressively
+        if (isIOSPWA()) {
+          setTimeout(() => {
+            if (serviceWorkerRegistration.waiting) {
+              console.log('Update found in waiting state');
+              showUpdateAvailable();
+            }
+          }, 2000);
+        }
+      }
+    }
+
+    // Show update available indicator
+    function showUpdateAvailable() {
+      isUpdateAvailable = true;
+      const versionElement = document.getElementById('versionInfo');
+      if (versionElement) {
+        versionElement.textContent = 'New version available';
+        versionElement.style.background = '#ed8936';
+        versionElement.style.color = 'white';
+        versionElement.title = 'Click to update';
+        console.log('Update indicator shown');
       }
     }
 
@@ -1133,6 +1163,9 @@
     document.getElementById('versionInfo').addEventListener('click', () => {
       if (isUpdateAvailable) {
         updateApp();
+      } else {
+        // Manual update check when clicked
+        checkForUpdates();
       }
     });
 
@@ -1147,6 +1180,13 @@
           serviceWorkerRegistration = registration;
           console.log('Service Worker registered successfully');
           
+          // Immediate update check for iOS PWAs
+          if (isIOSPWA()) {
+            setTimeout(() => checkForUpdates(), 1000);
+            // Periodic update check for iOS PWAs
+            setInterval(() => checkForUpdates(), 30000); // Check every 30 seconds
+          }
+          
           // Listen for updates
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
@@ -1155,19 +1195,19 @@
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 console.log('Update available');
-                isUpdateAvailable = true;
-                
-                // Show update indicator
-                const versionElement = document.getElementById('versionInfo');
-                if (versionElement) {
-                  versionElement.textContent = 'New version available';
-                  versionElement.style.background = '#ed8936';
-                  versionElement.style.color = 'white';
-                  versionElement.title = 'Click to update';
-                }
+                showUpdateAvailable();
               }
             });
           });
+          
+          // Also check for updates when app becomes visible (iOS specific)
+          if (isIOSPWA()) {
+            document.addEventListener('visibilitychange', () => {
+              if (!document.hidden) {
+                setTimeout(() => checkForUpdates(), 1000);
+              }
+            });
+          }
           
         } catch (error) {
           console.log('Service Worker registration failed:', error);
