@@ -520,12 +520,8 @@
         </div>
         
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeEditModal()" title="Zrušit">
-            ❌
-          </button>
-          <button type="submit" class="btn btn-primary" title="Uložit změny">
-            💾
-          </button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Zrušit</button>
+          <button type="submit" class="btn btn-primary">Uložit změny</button>
         </div>
       </form>
       <div class="status" id="editStatus"></div>
@@ -539,12 +535,8 @@
       <p>Opravdu chcete smazat tento citát?</p>
       <div class="quote-preview" id="deleteQuotePreview"></div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()" title="Zrušit">
-          ❌
-        </button>
-        <button type="button" class="btn btn-delete" onclick="confirmDelete()" title="Smazat">
-          🗑️
-        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Zrušit</button>
+        <button type="button" class="btn btn-delete" onclick="confirmDelete()">Smazat</button>
       </div>
       <div class="status" id="deleteStatus"></div>
     </div>
@@ -552,7 +544,7 @@
 
   <!-- Version Info -->
   <div id="versionInfo" class="version-info" title="Klikněte pro aktualizaci">
-    v1.2.3
+    v1.2.4
   </div>
 
   <script>
