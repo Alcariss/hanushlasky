@@ -417,6 +417,17 @@
       .form-group textarea,
       .form-group input[type="date"] {
         font-size: 16px; /* Prevents zoom on iOS */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border-radius: 8px;
+        background: white;
+      }
+      
+      /* iOS specific date input fixes */
+      .form-group input[type="date"]::-webkit-calendar-picker-indicator {
+        opacity: 1;
+        cursor: pointer;
       }
       
       .form-group textarea {
@@ -485,7 +496,7 @@
         
         <div class="form-group">
           <label for="quoteDate">Datum:</label>
-          <input type="date" id="quoteDate" name="quoteDate" required>
+          <input type="date" id="quoteDate" name="quoteDate" required autocomplete="off" style="-webkit-appearance: none;">
         </div>
         
         <button type="submit" class="btn btn-primary">Uložit citát</button>
@@ -516,7 +527,7 @@
         
         <div class="form-group">
           <label for="editQuoteDate">Datum:</label>
-          <input type="date" id="editQuoteDate" name="editQuoteDate" required>
+          <input type="date" id="editQuoteDate" name="editQuoteDate" required autocomplete="off" style="-webkit-appearance: none;">
         </div>
         
         <div class="modal-actions">
@@ -544,7 +555,7 @@
 
   <!-- Version Info -->
   <div id="versionInfo" class="version-info" title="Klikněte pro aktualizaci">
-    v1.2.5
+    v1.2.6
   </div>
 
   <script>
