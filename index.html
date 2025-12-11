@@ -172,6 +172,8 @@
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2);
       margin-top: 30px;
+      overflow: hidden; /* Ensure content stays within container */
+      min-height: 60px; /* Minimum height for loading/empty states */
     }
     
     /* Add subtle separator when quotes are present */
@@ -195,6 +197,9 @@
       padding: 20px;
       border-bottom: 1px solid #e2e8f0;
       transition: background-color 0.2s ease;
+      position: relative;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     .quote-item:last-child {
