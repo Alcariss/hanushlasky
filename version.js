@@ -1,5 +1,5 @@
 // Centralized version configuration
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.3.4';
 
 // For use in service worker
 if (typeof self !== 'undefined') {

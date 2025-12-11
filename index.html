@@ -184,6 +184,17 @@
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2);
       -webkit-overflow-scrolling: touch;
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      contain: layout style paint;
+      overflow: hidden;
+    }
+    
+    #quotesContainer::after {
+      content: '';
+      display: table;
+      clear: both;
     }
 
     .quote-item {
@@ -193,6 +204,9 @@
       position: relative;
       width: 100%;
       box-sizing: border-box;
+      display: block;
+      float: none;
+      clear: both;
     }
 
     .quote-item:last-child {
