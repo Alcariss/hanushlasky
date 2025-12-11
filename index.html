@@ -232,6 +232,20 @@
       font-weight: 500;
     }
 
+    .btn-icon {
+      padding: 8px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      margin: 0 4px;
+    }
+
     .btn-edit {
       background: #4299e1;
       color: white;
@@ -240,6 +254,7 @@
     .btn-edit:hover {
       background: #3182ce;
       transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
     }
 
     .btn-delete {
@@ -250,6 +265,7 @@
     .btn-delete:hover {
       background: #e53e3e;
       transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
     }
 
     /* Modal Styles */
@@ -504,8 +520,12 @@
         </div>
         
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Zrušit</button>
-          <button type="submit" class="btn btn-primary">Uložit změny</button>
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()" title="Zrušit">
+            ❌
+          </button>
+          <button type="submit" class="btn btn-primary" title="Uložit změny">
+            💾
+          </button>
         </div>
       </form>
       <div class="status" id="editStatus"></div>
@@ -519,8 +539,12 @@
       <p>Opravdu chcete smazat tento citát?</p>
       <div class="quote-preview" id="deleteQuotePreview"></div>
       <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Zrušit</button>
-        <button type="button" class="btn btn-delete" onclick="confirmDelete()">Smazat</button>
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()" title="Zrušit">
+          ❌
+        </button>
+        <button type="button" class="btn btn-delete" onclick="confirmDelete()" title="Smazat">
+          🗑️
+        </button>
       </div>
       <div class="status" id="deleteStatus"></div>
     </div>
@@ -528,7 +552,7 @@
 
   <!-- Version Info -->
   <div id="versionInfo" class="version-info" title="Klikněte pro aktualizaci">
-    v1.2.2
+    v1.2.3
   </div>
 
   <script>
@@ -810,8 +834,12 @@
           <div class="quote-text">"${escapeHtml(quote.text)}"</div>
           <div class="quote-date">${formatDate(quote.date)}</div>
           <div class="quote-actions">
-            <button class="btn-small btn-edit" onclick="editQuote(${index})">Upravit</button>
-            <button class="btn-small btn-delete" onclick="deleteQuote(${index})">Smazat</button>
+            <button class="btn-icon btn-edit" onclick="editQuote(${index})" title="Upravit citát">
+              ✏️
+            </button>
+            <button class="btn-icon btn-delete" onclick="deleteQuote(${index})" title="Smazat citát">
+              🗑️
+            </button>
           </div>
         </div>
       `).join('');
