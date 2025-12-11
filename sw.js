@@ -1,5 +1,8 @@
-const CACHE_NAME = 'citaty-syna-v1.2.2'; // Modern styling with Czech translation
-const APP_VERSION = '1.2.2'; // Modern styling with Czech translation
+// Import centralized version
+importScripts('./version.js');
+
+const CACHE_NAME = self.CACHE_NAME;
+const APP_VERSION = self.APP_VERSION;
 const urlsToCache = [
   './',
   './index.html',

@@ -558,7 +558,13 @@
     v1.2.6
   </div>
 
+  <script src="./version.js"></script>
   <script>
+    // Set version dynamically on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('versionInfo').textContent = `v${window.APP_VERSION}`;
+    });
+  
     // Configuration
     const CONFIG = {
       SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyJHVEa_a6gW0GltRVkkfDyG6SugziO2k9Xvt0QoRCrs4cLZ3bNsDfWnmgG--3kMDK30g/exec',
