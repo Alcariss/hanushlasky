@@ -183,8 +183,6 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.1);
       backdrop-filter: blur(10px);
       border: 1px solid rgba(255,255,255,0.2);
-      max-height: 500px;
-      overflow-y: auto;
       -webkit-overflow-scrolling: touch;
     }
 
@@ -839,8 +837,13 @@
       // Store quotes globally for edit/delete functionality
       currentQuotes = quotes || [];
       
+      // Reset infinite scroll state
+      allQuotesLoaded = quotes && quotes.length > 0;
+      isLoadingMoreQuotes = false;
+      
       if (!quotes || quotes.length === 0) {
         quotesContainer.innerHTML = '<div class="no-quotes">Nebyly nalezeny žádné citáty. Přidejte svůj první citát výše!</div>';
+        allQuotesLoaded = true;
         return;
       }
       
@@ -880,12 +883,55 @@
     }
 
     // Load quotes when page loads
-    window.addEventListener('load', safeFetchQuotes);
+    window.addEventListener('load', () => {
+      safeFetchQuotes();
+      initInfiniteScroll();
+    });
 
     // Global variables for quote management
     let currentQuotes = [];
     let editingQuoteIndex = -1;
     let deletingQuoteIndex = -1;
+    let isLoadingMoreQuotes = false;
+    let allQuotesLoaded = false;
+
+    // Infinite scroll functionality
+    function initInfiniteScroll() {
+      window.addEventListener('scroll', () => {
+        if (isLoadingMoreQuotes || allQuotesLoaded) return;
+        
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        // Load more when user is 200px from bottom
+        if (scrollTop + windowHeight >= documentHeight - 200) {
+          loadMoreQuotes();
+        }
+      });
+    }
+
+    function loadMoreQuotes() {
+      if (isLoadingMoreQuotes || allQuotesLoaded) return;
+      
+      isLoadingMoreQuotes = true;
+      
+      // Show loading indicator
+      const loadingIndicator = document.createElement('div');
+      loadingIndicator.className = 'loading-more';
+      loadingIndicator.innerHTML = '<div class="spinner"></div> Načítání dalších citátů...';
+      loadingIndicator.style.cssText = 'padding: 20px; text-align: center; color: #666; font-style: italic;';
+      
+      const quotesContainer = document.getElementById('quotesContainer');
+      quotesContainer.appendChild(loadingIndicator);
+      
+      // Simulate loading more quotes (since we're loading all at once currently)
+      setTimeout(() => {
+        loadingIndicator.remove();
+        isLoadingMoreQuotes = false;
+        allQuotesLoaded = true; // For now, mark as loaded since we get all quotes at once
+      }, 1000);
+    }
 
     // Edit quote functionality
     function editQuote(index) {
