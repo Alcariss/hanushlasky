@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Tests</title>
+<style>
+body { font-family: system-ui; background: #1a1a2e; color: #eee; padding: 20px; }
+h1 { color: #667eea; }
+h2 { color: #a0aec0; margin: 20px 0 10px; font-size: 1rem; }
+.pass { background: rgba(72,187,120,0.2); border-left: 3px solid #48bb78; padding: 10px; margin: 5px 0; border-radius: 4px; }
+.fail { background: rgba(245,101,101,0.2); border-left: 3px solid #f56565; padding: 10px; margin: 5px 0; border-radius: 4px; }
+.error { color: #fc8181; font-family: monospace; font-size: 0.85rem; margin-top: 5px; }
+.summary { position: fixed; top: 20px; right: 20px; background: #2d3748; padding: 15px; border-radius: 8px; }
+.summary .ok { color: #48bb78; }
+.summary .bad { color: #f56565; }
+button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<h1>Tests</h1>
+<button onclick="runTests()">Run All Tests</button>
+<div class="summary">
+<div>Total: <span id="total">0</span></div>
+<div class="ok">Pass: <span id="pass">0</span></div>
+<div class="bad">Fail: <span id="fail">0</span></div>
+</div>
+<div id="results"></div>
+<script>
+var passed = 0, failed = 0;
+var results = document.getElementById("results");
+
+function assert(condition, msg) {
+  if (!condition) throw new Error(msg || "Assertion failed");
+}
+
+function test(name, fn) {
+  var div = document.createElement("div");
+  try {
+    fn();
+    div.className = "pass";
+    div.textContent = "OK " + name;
+    passed++;
+  } catch (e) {
+    div.className = "fail";
+    div.innerHTML = "FAIL " + name + "<div class='error'>" + e.message + "</div>";
+    failed++;
+  }
+  results.appendChild(div);
+}
+
+function suite(name) {
+  var h = document.createElement("h2");
+  h.textContent = name;
+  results.appendChild(h);
+}
+
+function escapeHtml(text) {
+  var div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatDateForInput(dateString) {
+  return new Date(dateString).toISOString().split("T")[0];
+}
+
+function deduplicateQuotes(quotes) {
+  var seen = {};
+  return (quotes || []).filter(function(q) {
+    var key = q.date + "|" + q.text;
+    if (seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+}
+
+function isDuplicate(quotes, text, date) {
+  return quotes.some(function(q) {
+    return q.text === text && formatDateForInput(q.date) === date;
+  });
+}
+
+function runTests() {
+  results.innerHTML = "";
+  passed = 0;
+  failed = 0;
+
+  suite("escapeHtml");
+  test("escapes HTML tags", function() {
+    assert(escapeHtml("<b>") === "&lt;b&gt;");
+  });
+  test("escapes ampersands", function() {
+    assert(escapeHtml("A & B") === "A &amp; B");
+  });
+  test("handles normal text", function() {
+    assert(escapeHtml("hello") === "hello");
+  });
+
+  suite("formatDateForInput");
+  test("formats ISO date", function() {
+    assert(formatDateForInput("2024-12-25T00:00:00Z") === "2024-12-25");
+  });
+  test("formats simple date", function() {
+    assert(formatDateForInput("2024-01-15") === "2024-01-15");
+  });
+
+  suite("deduplicateQuotes");
+  test("removes exact duplicates", function() {
+    var q = [{date:"2024-01-01",text:"A"},{date:"2024-01-01",text:"A"},{date:"2024-01-02",text:"B"}];
+    assert(deduplicateQuotes(q).length === 2);
+  });
+  test("keeps different dates", function() {
+    var q = [{date:"2024-01-01",text:"A"},{date:"2024-01-02",text:"A"}];
+    assert(deduplicateQuotes(q).length === 2);
+  });
+  test("keeps different text", function() {
+    var q = [{date:"2024-01-01",text:"A"},{date:"2024-01-01",text:"B"}];
+    assert(deduplicateQuotes(q).length === 2);
+  });
+  test("handles empty", function() {
+    assert(deduplicateQuotes([]).length === 0);
+  });
+  test("handles null", function() {
+    assert(deduplicateQuotes(null).length === 0);
+  });
+
+  suite("isDuplicate");
+  test("detects duplicate", function() {
+    var q = [{date:"2024-01-01",text:"Hello"}];
+    assert(isDuplicate(q, "Hello", "2024-01-01") === true);
+  });
+  test("no false positive - different text", function() {
+    var q = [{date:"2024-01-01",text:"Hello"}];
+    assert(isDuplicate(q, "World", "2024-01-01") === false);
+  });
+  test("no false positive - different date", function() {
+    var q = [{date:"2024-01-01",text:"Hello"}];
+    assert(isDuplicate(q, "Hello", "2024-01-02") === false);
+  });
+  test("case sensitive", function() {
+    var q = [{date:"2024-01-01",text:"Hello"}];
+    assert(isDuplicate(q, "hello", "2024-01-01") === false);
+  });
+
+  suite("URL encoding");
+  test("handles special chars", function() {
+    var url = new URL("https://x.com/");
+    url.searchParams.append("q", "A & B");
+    assert(url.searchParams.get("q") === "A & B");
+  });
+
+  document.getElementById("total").textContent = passed + failed;
+  document.getElementById("pass").textContent = passed;
+  document.getElementById("fail").textContent = failed;
+}
+
+runTests();
+</script>
+</body>
+</html>

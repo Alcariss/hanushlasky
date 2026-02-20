@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Citáty mého syna</title>
+  <title>Hlášky</title>
   
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Sledování a ukládání nezapomenutelných citátů mého syna">
+  <meta name="description" id="metaDescription" content="Sledování a ukládání nezapomenutelných citátů">
   <meta name="theme-color" content="#007bff">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Synovy citáty">
+  <meta name="apple-mobile-web-app-title" id="appleTitle" content="Hlášky">
   
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
@@ -491,7 +491,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🍯 Hanuhlášky</h1>
+      <h1 id="appTitle">Hlášky</h1>
     </div>
     
     <div class="form-container">
@@ -561,20 +561,28 @@
     v1.2.6
   </div>
 
+  <script src="./config.js"></script>
   <script src="./version.js"></script>
   <script>
-    // Set version dynamically on page load
+    // Set dynamic content from config on page load
     document.addEventListener('DOMContentLoaded', () => {
+      // Version
       document.getElementById('versionInfo').textContent = `v${window.APP_VERSION}`;
+      
+      // App title and branding from config
+      document.title = APP_CONFIG.APP_TITLE;
+      document.getElementById('appTitle').textContent = APP_CONFIG.FULL_TITLE;
+      document.getElementById('metaDescription').content = `Sledování a ukládání nezapomenutelných citátů - ${APP_CONFIG.APP_TITLE}`;
+      document.getElementById('appleTitle').content = APP_CONFIG.APP_TITLE;
     });
   
-    // Configuration
+    // Configuration (uses values from config.js)
     const CONFIG = {
-      SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyJHVEa_a6gW0GltRVkkfDyG6SugziO2k9Xvt0QoRCrs4cLZ3bNsDfWnmgG--3kMDK30g/exec',
-      GOOGLE_SHEET_URL: 'https://docs.google.com/spreadsheets/d/1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A/edit',
-      TIMEOUT: 8000,
-      REFRESH_DELAY: 1000,
-      AUTO_HIDE_DELAY: 3000
+      SCRIPT_URL: APP_CONFIG.SCRIPT_URL,
+      GOOGLE_SHEET_URL: APP_CONFIG.GOOGLE_SHEET_URL,
+      TIMEOUT: APP_CONFIG.TIMEOUT,
+      REFRESH_DELAY: APP_CONFIG.REFRESH_DELAY,
+      AUTO_HIDE_DELAY: APP_CONFIG.AUTO_HIDE_DELAY
     };
     
     // DOM Elements
@@ -676,6 +684,13 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Prevent double submissions
+      if (isSubmitting) {
+        console.log('Submission already in progress, ignoring');
+        return;
+      }
+      
       const quote = document.getElementById('quote').value.trim();
       const selectedDate = quoteDateInput.value;
       
@@ -684,6 +699,20 @@
         showStatus("Prosím vyberte datum.", "error");
         return;
       }
+      
+      // Check for duplicate in current quotes (client-side)
+      const isDuplicate = currentQuotes.some(q => 
+        q.text === quote && formatDateForInput(q.date) === selectedDate
+      );
+      if (isDuplicate) {
+        showStatus("Tento citát již existuje.", "error");
+        return;
+      }
+      
+      isSubmitting = true;
+      const submitButton = form.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.textContent = 'Ukládání...';
 
       const data = {
         Date: selectedDate,
@@ -712,6 +741,12 @@
       } catch (error) {
         console.error('All methods failed:', error);
         showStatus(`Chyba při připojení k serveru: ${error.message}`, "error");
+      } finally {
+        // Re-enable form
+        isSubmitting = false;
+        const submitButton = form.querySelector('button[type="submit"]');
+        submitButton.disabled = false;
+        submitButton.textContent = 'Uložit citát';
       }
     });
 
@@ -833,15 +868,27 @@
 
     // Function to display quotes in the container
     function displayQuotes(quotes) {
-      // Store quotes globally for edit/delete functionality
-      currentQuotes = quotes || [];
+      // Deduplicate quotes (same text + date = duplicate)
+      const seen = new Set();
+      const uniqueQuotes = (quotes || []).filter(q => {
+        const key = `${q.date}|${q.text}`;
+        if (seen.has(key)) {
+          console.log('Duplicate filtered out:', q);
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
       
-      if (!quotes || quotes.length === 0) {
+      // Store quotes globally for edit/delete functionality
+      currentQuotes = uniqueQuotes;
+      
+      if (!uniqueQuotes || uniqueQuotes.length === 0) {
         quotesContainer.innerHTML = '<div class="no-quotes">Nebyly nalezeny žádné citáty. Přidejte svůj první citát výše!</div>';
         return;
       }
       
-      const quotesHTML = quotes.map((quote, index) => `
+      const quotesHTML = uniqueQuotes.map((quote, index) => `
         <div class="quote-item" data-index="${index}">
           <div class="quote-text">"${escapeHtml(quote.text)}"</div>
           <div class="quote-date">${formatDate(quote.date)}</div>
@@ -883,6 +930,7 @@
     let currentQuotes = [];
     let editingQuoteIndex = -1;
     let deletingQuoteIndex = -1;
+    let isSubmitting = false; // Prevent double submissions
 
     // Edit quote functionality
     function editQuote(index) {

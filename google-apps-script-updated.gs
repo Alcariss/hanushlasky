@@ -69,6 +69,22 @@ function addQuote(params) {
       throw new Error('Date and quote are required');
     }
     
+    // Check for duplicate (same date + quote text)
+    if (sheet.getLastRow() > 1) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        const existingDate = data[i][0].toString();
+        const existingQuote = data[i][1];
+        // Normalize dates for comparison
+        const normalizedExisting = new Date(existingDate).toISOString().split('T')[0];
+        const normalizedNew = new Date(date).toISOString().split('T')[0];
+        if (normalizedExisting === normalizedNew && existingQuote === quote) {
+          Logger.log('Duplicate quote detected, skipping: ' + quote);
+          return { success: true, message: 'Quote already exists (duplicate prevented)', duplicate: true };
+        }
+      }
+    }
+    
     // Add new row
     sheet.appendRow([date, quote]);
     

@@ -1,7 +1,7 @@
 {
-  "name": "My Son's Quotes",
-  "short_name": "Son's Quotes",
-  "description": "Track and save my son's memorable quotes",
+  "name": "Hlášky",
+  "short_name": "Hlášky",
+  "description": "Sledování a ukládání nezapomenutelných citátů",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f8f9fa",
