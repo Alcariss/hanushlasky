@@ -62,19 +62,7 @@ https://script.google.com/macros/s/AKfycby.../exec
 
 ---
 
-### Step 3: Deploy the Web App (GitHub Pages)
-
-1. Fork this repository or create a new one
-2. Upload all files to your repository
-3. Go to **Settings → Pages**
-4. Under "Source", select **Deploy from a branch**
-5. Choose **main** branch and **/ (root)** folder
-6. Click **Save**
-7. Your app will be available at `https://yourusername.github.io/repository-name/`
-
----
-
-### Step 4: Configure the App
+### Step 3: Configure the App
 
 Edit `config.js` with your values:
 
@@ -98,6 +86,19 @@ const APP_CONFIG = {
   AUTO_HIDE_DELAY: 3000
 };
 ```
+
+---
+
+### Step 4: Deploy the Web App (GitHub Pages)
+
+1. Fork this repository or create a new one
+2. Edit `config.js` with your values from Steps 1 and 2
+3. Commit and push your changes
+4. Go to **Settings → Pages**
+5. Under "Source", select **Deploy from a branch**
+6. Choose **main** branch and **/ (root)** folder
+7. Click **Save**
+8. Your app will be available at `https://yourusername.github.io/repository-name/`
 
 ---
 
