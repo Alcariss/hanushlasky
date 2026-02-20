@@ -275,6 +275,18 @@
       border-color: rgba(255, 255, 255, 0.3);
     }
 
+    .btn-share {
+      background: linear-gradient(135deg, rgba(72, 187, 120, 0.8), rgba(56, 161, 105, 0.8));
+      color: white;
+    }
+
+    .btn-share:hover {
+      background: linear-gradient(135deg, rgba(72, 187, 120, 1), rgba(56, 161, 105, 1));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(72, 187, 120, 0.4);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
     /* Modal Styles */
     .modal-overlay {
       position: fixed;
@@ -485,6 +497,29 @@
         font-size: 0.75rem;
         padding: 6px 10px;
       }
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: linear-gradient(135deg, rgba(74, 85, 104, 0.95), rgba(45, 55, 72, 0.95));
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transition: all 0.3s ease;
+      z-index: 10000;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
   </style>
 </head>
@@ -893,6 +928,9 @@
           <div class="quote-text">"${escapeHtml(quote.text)}"</div>
           <div class="quote-date">${formatDate(quote.date)}</div>
           <div class="quote-actions">
+            <button class="btn-icon btn-share" onclick="shareQuote(${index})" title="Sdílet citát">
+              📤
+            </button>
             <button class="btn-icon btn-edit" onclick="editQuote(${index})" title="Upravit citát">
               ✏️
             </button>
@@ -921,6 +959,60 @@
         month: 'short', 
         day: 'numeric' 
       });
+    }
+
+    // Share quote functionality
+    async function shareQuote(index) {
+      if (!currentQuotes[index]) return;
+      
+      const quote = currentQuotes[index];
+      const shareText = `"${quote.text}" - ${APP_CONFIG.KID_NAME}, ${formatDate(quote.date)}`;
+      
+      // Try native share API (mobile)
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: APP_CONFIG.APP_TITLE,
+            text: shareText
+          });
+          return;
+        } catch (err) {
+          // User cancelled or share failed, fall through to clipboard
+          if (err.name === 'AbortError') return;
+        }
+      }
+      
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareText);
+        showToast('Citát zkopírován do schránky');
+      } catch (err) {
+        // Final fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = shareText;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showToast('Citát zkopírován do schránky');
+      }
+    }
+
+    // Show toast notification
+    function showToast(message) {
+      const existingToast = document.querySelector('.toast');
+      if (existingToast) existingToast.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
     }
 
     // Load quotes when page loads
