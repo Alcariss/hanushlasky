@@ -3,7 +3,7 @@
 
 const APP_CONFIG = {
   // Google Apps Script deployment URL
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyFbg-AvWiSpBGKOgBAJkp1uA9o-qnPA17oTLuPJ29aEWzD6wEYQN7jnA-2jdHrsTEMbQ/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxX8rwlJo1NfEErQoX8qgM8DkTV7lU5rrAknkkIQH93v5bS1LBNFxlzGUi6pHWS6IRf5A/exec',
   
   // Google Sheet ID (from the sheet URL)
   SHEET_ID: '1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A',
