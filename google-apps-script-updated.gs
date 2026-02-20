@@ -125,8 +125,12 @@ function editQuote(params) {
       });
     }
     
-    // Sort by date descending (newest first) - same as display order
-    allQuotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort by date descending (newest first), then by row descending (newest added first within same day)
+    allQuotes.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return b.originalRow - a.originalRow;
+    });
     
     Logger.log('Edit operation - Total quotes after sorting: ' + allQuotes.length);
     Logger.log('Edit operation - Requested index: ' + index);
@@ -187,8 +191,12 @@ function deleteQuote(params) {
       });
     }
     
-    // Sort by date descending (newest first) - same as display order
-    allQuotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort by date descending (newest first), then by row descending (newest added first within same day)
+    allQuotes.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return b.originalRow - a.originalRow;
+    });
     
     Logger.log('Delete operation - Total quotes after sorting: ' + allQuotes.length);
     Logger.log('Delete operation - Requested index: ' + index);
@@ -244,14 +252,22 @@ function getQuotes() {
     
     const data = sheet.getDataRange().getValues();
     
-    // Skip header row and convert to objects
-    const quotes = data.slice(1).map(row => ({
+    // Skip header row and convert to objects with original index
+    const quotes = data.slice(1).map((row, index) => ({
       date: row[0],
-      text: row[1]
+      text: row[1],
+      _rowIndex: index
     }));
     
-    // Sort by date descending (newest first)
-    quotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort by date descending (newest first), then by row descending (newest added first within same day)
+    quotes.sort((a, b) => {
+      const dateDiff = new Date(b.date) - new Date(a.date);
+      if (dateDiff !== 0) return dateDiff;
+      return b._rowIndex - a._rowIndex;
+    });
+    
+    // Remove internal index before returning
+    quotes.forEach(q => delete q._rowIndex);
     
     Logger.log('Retrieved ' + quotes.length + ' quotes');
     return quotes;
