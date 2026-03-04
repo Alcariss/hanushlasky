@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <title>Tests</title>
+<!-- Load shared modules for integration tests -->
+<script src="./config.js"></script>
+<script src="./version.js"></script>
+<script src="./js/cache.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/ui.js"></script>
 <style>
 body { font-family: system-ui; background: #1a1a2e; color: #eee; padding: 20px; }
 h1 { color: #667eea; }
@@ -13,12 +19,15 @@ h2 { color: #a0aec0; margin: 20px 0 10px; font-size: 1rem; }
 .summary { position: fixed; top: 20px; right: 20px; background: #2d3748; padding: 15px; border-radius: 8px; }
 .summary .ok { color: #48bb78; }
 .summary .bad { color: #f56565; }
-button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; }
+button { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-bottom: 20px; transition: all 0.2s; }
+button:hover { background: #5a67d8; }
+button:active { transform: scale(0.95); }
+button.running { background: #ed8936; }
 </style>
 </head>
 <body>
 <h1>Tests</h1>
-<button onclick="runTests()">Run All Tests</button>
+<button id="runBtn" onclick="runTests()">Run All Tests</button>
 <div class="summary">
 <div>Total: <span id="total">0</span></div>
 <div class="ok">Pass: <span id="pass">0</span></div>
@@ -26,6 +35,11 @@ button { background: #667eea; color: white; border: none; padding: 10px 20px; bo
 </div>
 <div id="results"></div>
 <script>
+console.log('Test script starting...');
+console.log('QuotesUI:', typeof window.QuotesUI);
+console.log('QuotesCache:', typeof window.QuotesCache);
+console.log('QuotesAPI:', typeof window.QuotesAPI);
+
 var passed = 0, failed = 0;
 var results = document.getElementById("results");
 
@@ -80,11 +94,116 @@ function isDuplicate(quotes, text, date) {
   });
 }
 
-function runTests() {
-  results.innerHTML = "";
-  passed = 0;
-  failed = 0;
+// Cache configuration for tests (separate from app cache)
+var TEST_CACHE_KEY = 'hanuhlasky_quotes_cache_test';
+var TEST_CACHE_TIMESTAMP_KEY = 'hanuhlasky_cache_timestamp_test';
+var TEST_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
+// Cache functions for tests (isolated from app)
+function getCachedQuotes() {
+  try {
+    var cached = localStorage.getItem(TEST_CACHE_KEY);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn('Error reading cache:', e);
+  }
+  return null;
+}
+
+function setCachedQuotes(quotes) {
+  try {
+    localStorage.setItem(TEST_CACHE_KEY, JSON.stringify(quotes));
+    localStorage.setItem(TEST_CACHE_TIMESTAMP_KEY, Date.now().toString());
+  } catch (e) {
+    console.warn('Error writing cache:', e);
+  }
+}
+
+function getCacheAge() {
+  try {
+    var timestamp = localStorage.getItem(TEST_CACHE_TIMESTAMP_KEY);
+    if (timestamp) {
+      return Date.now() - parseInt(timestamp);
+    }
+  } catch (e) {
+    console.warn('Error reading cache timestamp:', e);
+  }
+  return Infinity;
+}
+
+function isCacheValid() {
+  return getCacheAge() < TEST_CACHE_MAX_AGE;
+}
+
+function invalidateCache() {
+  try {
+    localStorage.removeItem(TEST_CACHE_TIMESTAMP_KEY);
+  } catch (e) {
+    console.warn('Error invalidating cache:', e);
+  }
+}
+
+function addQuoteToCache(quote, date) {
+  try {
+    var cached = getCachedQuotes() || [];
+    cached.unshift({ text: quote, date: date });
+    setCachedQuotes(cached);
+  } catch (e) {
+    console.warn('Error adding quote to cache:', e);
+  }
+}
+
+function clearTestCache() {
+  localStorage.removeItem(TEST_CACHE_KEY);
+  localStorage.removeItem(TEST_CACHE_TIMESTAMP_KEY);
+}
+
+// Retry delay calculation for tests
+var TEST_BASE_RETRY_DELAY = 1000;
+function calculateRetryDelay(attempt) {
+  return TEST_BASE_RETRY_DELAY * Math.pow(2, attempt - 1);
+}
+
+// Cache age text formatting (mirrored from index.html displayQuotes)
+function formatCacheAgeText(cacheAge) {
+  if (cacheAge < 60000) return 'před chvílí';
+  if (cacheAge < 3600000) return 'před ' + Math.floor(cacheAge / 60000) + ' min';
+  return 'před ' + Math.floor(cacheAge / 3600000) + ' hod';
+}
+
+function runTests() {
+  var btn = document.getElementById("runBtn");
+  btn.textContent = "Running...";
+  btn.classList.add("running");
+  btn.disabled = true;
+  
+  // Brief delay so user can see the button state change
+  setTimeout(function() {
+    results.innerHTML = "";
+    passed = 0;
+    failed = 0;
+    
+    executeAllTests();
+    
+    document.getElementById("total").textContent = passed + failed;
+    document.getElementById("pass").textContent = passed;
+    document.getElementById("fail").textContent = failed;
+    
+    // Cleanup
+    clearTestCache();
+    
+    // Reset button after a brief moment
+    setTimeout(function() {
+      btn.textContent = "Run All Tests ✓";
+      btn.classList.remove("running");
+      btn.disabled = false;
+    }, 300);
+  }, 100);
+}
+
+function executeAllTests() {
   suite("escapeHtml");
   test("escapes HTML tags", function() {
     assert(escapeHtml("<b>") === "&lt;b&gt;");
@@ -149,12 +268,248 @@ function runTests() {
     assert(url.searchParams.get("q") === "A & B");
   });
 
-  document.getElementById("total").textContent = passed + failed;
-  document.getElementById("pass").textContent = passed;
-  document.getElementById("fail").textContent = failed;
+  suite("Cache - Basic Operations");
+  clearTestCache();
+  test("getCachedQuotes returns null when empty", function() {
+    clearTestCache();
+    assert(getCachedQuotes() === null);
+  });
+  test("setCachedQuotes stores quotes", function() {
+    clearTestCache();
+    var quotes = [{date:"2024-01-01",text:"Test"}];
+    setCachedQuotes(quotes);
+    var cached = getCachedQuotes();
+    assert(cached !== null);
+    assert(cached.length === 1);
+    assert(cached[0].text === "Test");
+  });
+  test("getCachedQuotes retrieves stored quotes", function() {
+    clearTestCache();
+    var quotes = [{date:"2024-01-01",text:"A"},{date:"2024-01-02",text:"B"}];
+    setCachedQuotes(quotes);
+    var cached = getCachedQuotes();
+    assert(cached.length === 2);
+    assert(cached[0].text === "A");
+    assert(cached[1].text === "B");
+  });
+  test("cache preserves quote data", function() {
+    clearTestCache();
+    var quotes = [{date:"2024-12-25",text:"Merry Christmas!"}];
+    setCachedQuotes(quotes);
+    var cached = getCachedQuotes();
+    assert(cached[0].date === "2024-12-25");
+    assert(cached[0].text === "Merry Christmas!");
+  });
+
+  suite("Cache - Age & Validity");
+  test("getCacheAge returns Infinity when no timestamp", function() {
+    clearTestCache();
+    assert(getCacheAge() === Infinity);
+  });
+  test("getCacheAge returns reasonable value after set", function() {
+    clearTestCache();
+    setCachedQuotes([{date:"2024-01-01",text:"Test"}]);
+    var age = getCacheAge();
+    assert(age >= 0, "Age should be >= 0");
+    assert(age < 1000, "Age should be < 1000ms (just set)");
+  });
+  test("isCacheValid returns false when no cache", function() {
+    clearTestCache();
+    assert(isCacheValid() === false);
+  });
+  test("isCacheValid returns true for fresh cache", function() {
+    clearTestCache();
+    setCachedQuotes([{date:"2024-01-01",text:"Test"}]);
+    assert(isCacheValid() === true);
+  });
+  test("invalidateCache makes cache invalid", function() {
+    clearTestCache();
+    setCachedQuotes([{date:"2024-01-01",text:"Test"}]);
+    assert(isCacheValid() === true);
+    invalidateCache();
+    assert(isCacheValid() === false);
+  });
+  test("invalidateCache preserves data but not timestamp", function() {
+    clearTestCache();
+    setCachedQuotes([{date:"2024-01-01",text:"Test"}]);
+    invalidateCache();
+    var cached = getCachedQuotes();
+    assert(cached !== null, "Data should still exist");
+    assert(cached.length === 1);
+  });
+
+  suite("Cache - Optimistic Updates");
+  test("addQuoteToCache adds to empty cache", function() {
+    clearTestCache();
+    addQuoteToCache("New quote", "2024-02-01");
+    var cached = getCachedQuotes();
+    assert(cached !== null);
+    assert(cached.length === 1);
+    assert(cached[0].text === "New quote");
+    assert(cached[0].date === "2024-02-01");
+  });
+  test("addQuoteToCache prepends to existing cache", function() {
+    clearTestCache();
+    setCachedQuotes([{date:"2024-01-01",text:"Old"}]);
+    addQuoteToCache("New", "2024-02-01");
+    var cached = getCachedQuotes();
+    assert(cached.length === 2);
+    assert(cached[0].text === "New", "New quote should be first");
+    assert(cached[1].text === "Old", "Old quote should be second");
+  });
+  test("addQuoteToCache maintains order (newest first)", function() {
+    clearTestCache();
+    addQuoteToCache("First", "2024-01-01");
+    addQuoteToCache("Second", "2024-01-02");
+    addQuoteToCache("Third", "2024-01-03");
+    var cached = getCachedQuotes();
+    assert(cached.length === 3);
+    assert(cached[0].text === "Third");
+    assert(cached[1].text === "Second");
+    assert(cached[2].text === "First");
+  });
+
+  suite("Retry Logic - Exponential Backoff");
+  test("attempt 1 delay is 1000ms", function() {
+    assert(calculateRetryDelay(1) === 1000);
+  });
+  test("attempt 2 delay is 2000ms", function() {
+    assert(calculateRetryDelay(2) === 2000);
+  });
+  test("attempt 3 delay is 4000ms", function() {
+    assert(calculateRetryDelay(3) === 4000);
+  });
+  test("attempt 4 delay is 8000ms", function() {
+    assert(calculateRetryDelay(4) === 8000);
+  });
+  test("delays follow power of 2", function() {
+    for (var i = 1; i <= 5; i++) {
+      var expected = BASE_RETRY_DELAY * Math.pow(2, i - 1);
+      assert(calculateRetryDelay(i) === expected, "Attempt " + i + " should be " + expected);
+    }
+  });
+
+  suite("Cache Age Text Formatting");
+  test("formats < 1 minute as 'před chvílí'", function() {
+    assert(formatCacheAgeText(30000) === "před chvílí");
+    assert(formatCacheAgeText(59999) === "před chvílí");
+  });
+  test("formats 1 minute", function() {
+    assert(formatCacheAgeText(60000) === "před 1 min");
+  });
+  test("formats 5 minutes", function() {
+    assert(formatCacheAgeText(300000) === "před 5 min");
+  });
+  test("formats 59 minutes", function() {
+    assert(formatCacheAgeText(3540000) === "před 59 min");
+  });
+  test("formats 1 hour", function() {
+    assert(formatCacheAgeText(3600000) === "před 1 hod");
+  });
+  test("formats 2 hours", function() {
+    assert(formatCacheAgeText(7200000) === "před 2 hod");
+  });
+
+  suite("Edge Cases");
+  test("cache handles empty array", function() {
+    clearTestCache();
+    setCachedQuotes([]);
+    var cached = getCachedQuotes();
+    assert(cached !== null);
+    assert(cached.length === 0);
+  });
+  test("cache handles special characters in text", function() {
+    clearTestCache();
+    var specialText = "Test <b>bold</b> & more \"quotes\" 'apos'";
+    var quotes = [{date:"2024-01-01",text:specialText}];
+    setCachedQuotes(quotes);
+    var cached = getCachedQuotes();
+    assert(cached[0].text === specialText);
+  });
+  test("cache handles unicode", function() {
+    clearTestCache();
+    var quotes = [{date:"2024-01-01",text:"Říkám ti 🎉 čau!"}];
+    setCachedQuotes(quotes);
+    var cached = getCachedQuotes();
+    assert(cached[0].text === "Říkám ti 🎉 čau!");
+  });
+  test("cache handles very long text", function() {
+    clearTestCache();
+    var longText = "A".repeat(10000);
+    var quotes = [{date:"2024-01-01",text:longText}];
+    setCachedQuotes(quotes);
+    var cached = getCachedQuotes();
+    assert(cached[0].text.length === 10000);
+  });
+
+  // Module Integration Tests
+  suite("Module Integration - QuotesUI");
+  test("QuotesUI module exists", function() {
+    assert(typeof window.QuotesUI === "object", "QuotesUI should be defined");
+  });
+  test("QuotesUI.escapeHtml works", function() {
+    assert(typeof window.QuotesUI.escapeHtml === "function", "escapeHtml should be a function");
+    assert(window.QuotesUI.escapeHtml("<b>") === "&lt;b&gt;", "should escape HTML");
+  });
+  test("QuotesUI.formatDate works", function() {
+    assert(typeof window.QuotesUI.formatDate === "function", "formatDate should be a function");
+  });
+  test("QuotesUI.deduplicateQuotes works", function() {
+    assert(typeof window.QuotesUI.deduplicateQuotes === "function", "deduplicateQuotes should be a function");
+    var result = window.QuotesUI.deduplicateQuotes([
+      {date:"2024-01-01",text:"A"},
+      {date:"2024-01-01",text:"A"}
+    ]);
+    assert(result.length === 1, "should remove duplicates");
+  });
+
+  suite("Module Integration - QuotesCache");
+  test("QuotesCache module exists", function() {
+    assert(typeof window.QuotesCache === "object", "QuotesCache should be defined");
+  });
+  test("QuotesCache has required methods", function() {
+    assert(typeof window.QuotesCache.getCachedQuotes === "function");
+    assert(typeof window.QuotesCache.setCachedQuotes === "function");
+    assert(typeof window.QuotesCache.isCacheValid === "function");
+    assert(typeof window.QuotesCache.invalidateCache === "function");
+  });
+
+  suite("Module Integration - QuotesAPI");
+  test("QuotesAPI module exists", function() {
+    assert(typeof window.QuotesAPI === "object", "QuotesAPI should be defined");
+  });
+  test("QuotesAPI has required methods", function() {
+    assert(typeof window.QuotesAPI.fetchWithRetry === "function");
+    assert(typeof window.QuotesAPI.calculateRetryDelay === "function");
+  });
+  test("QuotesAPI.calculateRetryDelay returns correct values", function() {
+    assert(window.QuotesAPI.calculateRetryDelay(1) === 1000, "attempt 1 should be 1000ms");
+    assert(window.QuotesAPI.calculateRetryDelay(2) === 2000, "attempt 2 should be 2000ms");
+    assert(window.QuotesAPI.calculateRetryDelay(3) === 4000, "attempt 3 should be 4000ms");
+  });
+
+  suite("Module Integration - Config");
+  test("APP_CONFIG exists", function() {
+    assert(typeof window.APP_CONFIG === "object", "APP_CONFIG should be defined");
+  });
+  test("APP_CONFIG has required properties", function() {
+    assert(typeof window.APP_CONFIG.SCRIPT_URL === "string");
+    assert(typeof window.APP_CONFIG.TIMEOUT === "number");
+  });
+  test("APP_VERSION exists", function() {
+    assert(typeof window.APP_VERSION === "string", "APP_VERSION should be defined");
+  });
+
 }
 
-runTests();
+try {
+  console.log('About to run tests...');
+  runTests();
+  console.log('Tests completed');
+} catch (e) {
+  console.error('Error running tests:', e);
+  document.body.innerHTML += '<div style="color:red;padding:20px;">Error: ' + e.message + '<br><pre>' + e.stack + '</pre></div>';
+}
 </script>
 </body>
 </html>

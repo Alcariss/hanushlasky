@@ -15,7 +15,7 @@ const APP_CONFIG = {
   EMOJI: '🍯',
   
   // App timeouts (in milliseconds)
-  TIMEOUT: 8000,
+  TIMEOUT: 12000,
   REFRESH_DELAY: 1000,
   AUTO_HIDE_DELAY: 3000
 };
@@ -28,4 +28,9 @@ APP_CONFIG.GOOGLE_SHEET_URL = `https://docs.google.com/spreadsheets/d/${APP_CONF
 // Export for use in service worker
 if (typeof self !== 'undefined' && typeof window === 'undefined') {
   self.APP_CONFIG = APP_CONFIG;
+}
+
+// Export to window for browser access
+if (typeof window !== 'undefined') {
+  window.APP_CONFIG = APP_CONFIG;
 }

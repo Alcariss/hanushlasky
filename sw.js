@@ -9,15 +9,21 @@ const urlsToCache = [
   './manifest.json',
   './config.js',
   './version.js',
+  './css/styles.css',
+  './js/errors.js',
+  './js/cache.js',
+  './js/api.js',
+  './js/ui.js',
+  './js/app.js',
   './icon-180.png',
   './icon-192.png',
   './icon-512.png'
 ];
 
-// iOS-specific: Detect if running as standalone app
+// Service worker context - detect standalone mode safely
 const isStandalone = () => {
-  return window.matchMedia('(display-mode: standalone)').matches || 
-         window.navigator.standalone === true;
+  // In service worker, we can't access window - check via clients if needed
+  return false; // Default to false in SW context
 };
 
 // Install event - cache resources
