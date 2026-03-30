@@ -7,7 +7,22 @@ const EMAIL_RECIPIENTS = "jan.chmelar90@google.com, klasedlakova@gmail.com";
 const EMAIL_ENABLED = true; // Set to false to disable email notifications
 // ===================================================
 
+// Sheet ID from your Google Sheets URL
+const SHEET_ID = "1eXW41Uvwm8TqIGFhhHPSbNhQpObnEwM0PwV707dYU-A";
+
+// Helper to get the sheet (works both from web and direct execution)
+function getSheet() {
+  return SpreadsheetApp.openById(SHEET_ID).getActiveSheet();
+}
+
 function doGet(e) {
+  // Handle direct execution (no event object)
+  if (!e || !e.parameter) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'Direct execution not supported. Use test functions or call via URL.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
   const action = e.parameter.action;
   const callback = e.parameter.callback;
   
@@ -61,7 +76,7 @@ function doGet(e) {
 
 function addQuote(params) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const sheet = getSheet();
     
     // Add header row if sheet is empty
     if (sheet.getLastRow() === 0) {
@@ -108,7 +123,7 @@ function addQuote(params) {
 
 function editQuote(params) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const sheet = getSheet();
     const index = parseInt(params.index);
     const newDate = params.date;
     const newQuote = params.quote;
@@ -176,7 +191,7 @@ function editQuote(params) {
 
 function deleteQuote(params) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const sheet = getSheet();
     const index = parseInt(params.index);
     
     if (isNaN(index)) {
@@ -253,7 +268,7 @@ function deleteQuote(params) {
 
 function getQuotes() {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const sheet = getSheet();
     
     if (sheet.getLastRow() === 0) {
       return [];
