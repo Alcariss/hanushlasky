@@ -3,7 +3,7 @@
 
 // ============ EMAIL NOTIFICATION CONFIG ============
 // Add email addresses to receive notifications (comma-separated for multiple)
-const EMAIL_RECIPIENTS = "jan.chmelar90@google.com, klasedlakova@gmail.com";
+const EMAIL_RECIPIENTS = "jan.chmelar90@gmail.com, klasedlakova@gmail.com";
 const EMAIL_ENABLED = true; // Set to false to disable email notifications
 // ===================================================
 
@@ -340,7 +340,7 @@ function sendEmailNotification(date, quote) {
   }
   
   try {
-    const subject = "New Quote Added - Hanuš Laský";
+    const subject = "🍯 Hanuhlášky - New Quote Added";
     const body = "A new quote was added:\n\n" +
                  "Date: " + date + "\n" +
                  "Quote: " + quote;
