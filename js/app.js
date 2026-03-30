@@ -518,19 +518,37 @@
 
       if ('caches' in window) {
         caches.keys().then(names => {
-          names.forEach(name => caches.delete(name));
-          setTimeout(() => window.location.reload(true), 500);
+          Promise.all(names.map(name => caches.delete(name))).then(() => {
+            window.location.reload(true);
+          });
         });
       } else {
-        setTimeout(() => window.location.reload(true), 500);
+        window.location.reload(true);
       }
     }
     
     document.getElementById('versionInfo').addEventListener('click', () => {
-      if (isUpdateAvailable) {
+      // On iOS or when already showing update, always force update
+      // Otherwise check first, then force update if clicked again
+      if (isUpdateAvailable || isIOSPWA()) {
         updateApp();
       } else {
+        // Show checking state
+        const versionElement = document.getElementById('versionInfo');
+        const originalText = versionElement.textContent;
+        versionElement.textContent = 'Kontrola...';
+        
         checkForUpdates();
+        
+        // If no update found after 3 seconds, offer force refresh
+        setTimeout(() => {
+          if (!isUpdateAvailable) {
+            versionElement.textContent = 'Klikněte znovu pro update';
+            versionElement.style.background = '#4299e1';
+            versionElement.style.color = 'white';
+            isUpdateAvailable = true; // Allow force update on next click
+          }
+        }, 3000);
       }
     });
     
