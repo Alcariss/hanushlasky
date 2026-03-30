@@ -40,28 +40,6 @@
     document.getElementById('metaDescription').content = `Sledování a ukládání nezapomenutelných citátů - ${APP_CONFIG.APP_TITLE}`;
     document.getElementById('appleTitle').content = APP_CONFIG.APP_TITLE;
     
-    // Form toggle functionality
-    const formContainer = document.getElementById('formContainer');
-    const formToggle = document.getElementById('formToggle');
-    
-    formToggle.addEventListener('click', () => {
-      formContainer.classList.toggle('collapsed');
-      localStorage.setItem('formCollapsed', formContainer.classList.contains('collapsed'));
-    });
-    
-    // Restore collapsed state from localStorage
-    if (localStorage.getItem('formCollapsed') === 'true') {
-      formContainer.classList.add('collapsed');
-    }
-    
-    // Auto-collapse form after successful submission
-    function collapseFormAfterSubmit() {
-      setTimeout(() => {
-        formContainer.classList.add('collapsed');
-        localStorage.setItem('formCollapsed', 'true');
-      }, 1500);
-    }
-    
     // Application state
     let currentQuotes = [];
     let editingQuoteIndex = -1;
@@ -134,7 +112,6 @@
         Cache.addQuoteToCache(quote, selectedDate);
         showStatus("Citát byl úspěšně uložen!", "success");
         resetFormAndRefresh();
-        collapseFormAfterSubmit();
         
       } catch (error) {
         console.error('All methods failed:', error);
