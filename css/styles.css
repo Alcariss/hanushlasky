@@ -38,10 +38,58 @@ body {
   background: white;
   padding: 30px;
   border-radius: 16px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255,255,255,0.2);
+  position: sticky;
+  top: 10px;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
+
+.form-container.collapsed {
+  padding: 12px 20px;
+}
+
+.form-container.collapsed form {
+  display: none;
+}
+
+.form-container.collapsed .status {
+  display: none !important;
+}
+
+.form-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.form-container.collapsed .form-toggle {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.form-toggle-text {
+  font-weight: 600;
+  color: #667eea;
+  font-size: 0.95rem;
+}
+
+.form-toggle-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+  color: #667eea;
+}
+
+.form-container.collapsed .form-toggle-icon {
+  transform: rotate(180deg);
 }
 
 .form-group {
@@ -148,7 +196,8 @@ body {
 
 /* Quotes Section */
 .quotes-section {
-  margin-top: 30px;
+  margin-top: 20px;
+  padding-bottom: 80px; /* Space for version info */
 }
 
 .quotes-section h2 {
@@ -158,31 +207,48 @@ body {
   font-size: 1.5rem;
   font-weight: 600;
   text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  position: sticky;
+  top: 80px;
+  z-index: 50;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%);
+  padding: 12px 20px;
+  border-radius: 30px;
+  max-width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  backdrop-filter: blur(10px);
 }
 
 #quotesContainer {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.2);
-  max-height: 500px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .quote-item {
+  background: white;
   padding: 20px;
-  border-bottom: 1px solid #e2e8f0;
-  transition: background-color 0.2s ease;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+  animation: slideIn 0.4s ease-out;
 }
 
-.quote-item:last-child {
-  border-bottom: none;
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .quote-item:hover {
-  background-color: #f8fafc;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
 }
 
 .quote-text {
@@ -338,6 +404,9 @@ body {
   text-align: center;
   color: #4a5568;
   font-style: italic;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
 }
 
 .error-message {
@@ -519,14 +588,15 @@ body {
   
   .quotes-section h2 {
     font-size: 1.25rem;
-  }
-  
-  #quotesContainer {
-    max-height: 400px;
+    top: 70px;
   }
   
   .quote-item {
     padding: 16px;
+  }
+  
+  .form-container {
+    border-radius: 12px;
   }
 }
 
@@ -537,18 +607,25 @@ body {
   
   .form-container {
     padding: 16px;
+    top: 5px;
+    margin-left: -6px;
+    margin-right: -6px;
+    border-radius: 12px;
+  }
+  
+  .form-container.collapsed {
+    padding: 10px 16px;
   }
   
   .quotes-section h2 {
     font-size: 1.1rem;
-  }
-  
-  #quotesContainer {
-    max-height: 350px;
+    top: 60px;
+    padding: 10px 16px;
   }
   
   .quote-item {
-    padding: 12px;
+    padding: 14px;
+    border-radius: 12px;
   }
   
   .quote-text {
