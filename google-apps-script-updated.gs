@@ -1,6 +1,12 @@
 // Updated Google Apps Script code for handling edit/delete operations
 // This should replace or extend your existing Google Apps Script
 
+// ============ EMAIL NOTIFICATION CONFIG ============
+// Add email addresses to receive notifications (comma-separated for multiple)
+const EMAIL_RECIPIENTS = "jan.chmelar90@google.com, klasedlakova@gmail.com";
+const EMAIL_ENABLED = true; // Set to false to disable email notifications
+// ===================================================
+
 function doGet(e) {
   const action = e.parameter.action;
   const callback = e.parameter.callback;
@@ -87,6 +93,9 @@ function addQuote(params) {
     
     // Add new row
     sheet.appendRow([date, quote]);
+    
+    // Send email notification
+    sendEmailNotification(date, quote);
     
     Logger.log('Quote added successfully: ' + quote);
     return { success: true, message: 'Quote added successfully' };
@@ -306,4 +315,29 @@ function testDeleteQuote() {
 function testGetQuotes() {
   const result = getQuotes();
   Logger.log(result);
+}
+
+// ============ EMAIL NOTIFICATION ============
+function sendEmailNotification(date, quote) {
+  if (!EMAIL_ENABLED || !EMAIL_RECIPIENTS) {
+    Logger.log('Email notifications disabled');
+    return;
+  }
+  
+  try {
+    const subject = "New Quote Added - Hanuš Laský";
+    const body = "A new quote was added:\n\n" +
+                 "Date: " + date + "\n" +
+                 "Quote: " + quote;
+    
+    MailApp.sendEmail(EMAIL_RECIPIENTS, subject, body);
+    Logger.log('Email notification sent to: ' + EMAIL_RECIPIENTS);
+  } catch (error) {
+    // Don't fail the whole operation if email fails
+    Logger.log('Failed to send email notification: ' + error.toString());
+  }
+}
+
+function testEmailNotification() {
+  sendEmailNotification('2026-03-30', 'Test quote for email notification');
 }
