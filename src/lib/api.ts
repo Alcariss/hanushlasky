@@ -95,17 +95,15 @@ export async function createQuote(
 ): Promise<Quote> {
   const url = new URL(APP_CONFIG.apiUrlPrimary);
   url.searchParams.set('action', 'add');
+  url.searchParams.set('text', input.text);
+  url.searchParams.set('date', input.date);
   appendToken(url);
 
   const response = await fetch(url.toString(), {
-    method: 'POST',
+    method: 'GET',
     headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify({
-      text: input.text,
-      date: input.date
-    })
+      Accept: 'application/json'
+    }
   });
 
   if (!response.ok) {

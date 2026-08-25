@@ -26,10 +26,12 @@ function doGet(e) {
     });
   }
 
-  if (e.parameter.action !== 'fetch') {
+  var action = e.parameter.action;
+
+  if (action !== 'fetch' && action !== 'add') {
     return jsonOutput({
       success: false,
-      data: [],
+      data: null,
       meta: responseMeta('primary'),
       errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
       message: 'Unsupported action'
@@ -39,13 +41,21 @@ function doGet(e) {
   if (!isAuthorized(e.parameter.token)) {
     return jsonOutput({
       success: false,
-      data: [],
+      data: null,
       meta: responseMeta('primary'),
       errorCode: FETCH_ERROR_CODES.UNAUTHORIZED,
       message: 'Unauthorized'
     });
   }
 
+  if (action === 'add') {
+    return handleAdd(e.parameter);
+  }
+
+  return handleFetch();
+}
+
+function handleFetch() {
   try {
     const primaryRows = readSheetRows(PRIMARY_SHEET_URL);
     return jsonOutput({
@@ -85,51 +95,9 @@ function doGet(e) {
   }
 }
 
-function doPost(e) {
-  if (!e || !e.parameter) {
-    return jsonOutput({
-      success: false,
-      data: null,
-      meta: responseMeta('primary'),
-      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
-      message: 'Missing parameters'
-    });
-  }
-
-  if (!isAuthorized(e.parameter.token)) {
-    return jsonOutput({
-      success: false,
-      data: null,
-      meta: responseMeta('primary'),
-      errorCode: FETCH_ERROR_CODES.UNAUTHORIZED,
-      message: 'Unauthorized'
-    });
-  }
-
-  if (e.parameter.action !== 'add') {
-    return jsonOutput({
-      success: false,
-      data: null,
-      meta: responseMeta('primary'),
-      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
-      message: 'Unsupported action'
-    });
-  }
-
-  try {
-    var body = JSON.parse(e.postData.contents);
-  } catch (parseError) {
-    return jsonOutput({
-      success: false,
-      data: null,
-      meta: responseMeta('primary'),
-      errorCode: 'INVALID_BODY',
-      message: 'Invalid JSON body'
-    });
-  }
-
-  var text = String(body.text || '').trim();
-  var date = String(body.date || '').trim();
+function handleAdd(params) {
+  var text = String(params.text || '').trim();
+  var date = String(params.date || '').trim();
 
   if (!text || !date) {
     return jsonOutput({
