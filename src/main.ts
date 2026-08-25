@@ -131,20 +131,12 @@ function renderQuotes(quotes: Quote[]): void {
       (quote) => `
       <article class="quote-card" data-id="${escapeHtml(quote.id)}">
         <div class="quote-view">
-          <div class="quote-content">
-            <p class="quote-text">
-              "${escapeHtml(quote.text)}"
-            </p>
-            <p class="quote-date">
-              ${escapeHtml(formatDate(quote.date))}
-            </p>
-          </div>
-          <div class="quote-actions">
-            <button type="button" class="btn-edit"
-              data-id="${escapeHtml(quote.id)}">✏️</button>
-            <button type="button" class="btn-delete"
-              data-id="${escapeHtml(quote.id)}">🗑️</button>
-          </div>
+          <p class="quote-text">
+            "${escapeHtml(quote.text)}"
+          </p>
+          <p class="quote-date">
+            ${escapeHtml(formatDate(quote.date))}
+          </p>
         </div>
         <div class="quote-edit hidden">
           <textarea class="edit-text" rows="3"
@@ -156,6 +148,8 @@ function renderQuotes(quotes: Quote[]): void {
               class="btn-save">Uložit</button>
             <button type="button"
               class="btn-cancel">Zrušit</button>
+            <button type="button"
+              class="btn-delete">Smazat</button>
           </div>
           <p class="edit-error hidden"></p>
         </div>
@@ -164,12 +158,8 @@ function renderQuotes(quotes: Quote[]): void {
     )
     .join('');
 
-  quotesNode.querySelectorAll('.btn-edit').forEach((btn) => {
-    btn.addEventListener('click', handleEditClick);
-  });
-
-  quotesNode.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', handleDeleteClick);
+  quotesNode.querySelectorAll('.quote-view').forEach((el) => {
+    el.addEventListener('click', handleCardClick);
   });
 
   quotesNode.querySelectorAll('.btn-cancel').forEach((btn) => {
@@ -179,13 +169,16 @@ function renderQuotes(quotes: Quote[]): void {
   quotesNode.querySelectorAll('.btn-save').forEach((btn) => {
     btn.addEventListener('click', handleSaveClick);
   });
+
+  quotesNode.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', handleDeleteClick);
+  });
 }
 
-function handleEditClick(event: Event): void {
-  const btn = event.currentTarget as HTMLElement;
-  const card = btn.closest('.quote-card') as HTMLElement;
-  card.querySelector('.quote-view')
-    ?.classList.add('hidden');
+function handleCardClick(event: Event): void {
+  const view = event.currentTarget as HTMLElement;
+  const card = view.closest('.quote-card') as HTMLElement;
+  view.classList.add('hidden');
   card.querySelector('.quote-edit')
     ?.classList.remove('hidden');
 }
@@ -248,7 +241,8 @@ async function handleDeleteClick(
   event: Event
 ): Promise<void> {
   const btn = event.currentTarget as HTMLButtonElement;
-  const id = btn.dataset.id ?? '';
+  const card = btn.closest('.quote-card') as HTMLElement;
+  const id = card.dataset.id ?? '';
 
   if (!confirm('Opravdu smazat tento citát?')) {
     return;
