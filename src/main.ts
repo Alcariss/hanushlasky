@@ -79,6 +79,12 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function toISODate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return todayISO();
+  return d.toISOString().slice(0, 10);
+}
+
 addDate.value = todayISO();
 
 addForm.addEventListener('submit', async (event) => {
@@ -125,12 +131,14 @@ function renderQuotes(quotes: Quote[]): void {
       (quote) => `
       <article class="quote-card" data-id="${escapeHtml(quote.id)}">
         <div class="quote-view">
-          <p class="quote-text">
-            "${escapeHtml(quote.text)}"
-          </p>
-          <p class="quote-date">
-            ${escapeHtml(formatDate(quote.date))}
-          </p>
+          <div class="quote-content">
+            <p class="quote-text">
+              "${escapeHtml(quote.text)}"
+            </p>
+            <p class="quote-date">
+              ${escapeHtml(formatDate(quote.date))}
+            </p>
+          </div>
           <div class="quote-actions">
             <button type="button" class="btn-edit"
               data-id="${escapeHtml(quote.id)}">✏️</button>
@@ -142,7 +150,7 @@ function renderQuotes(quotes: Quote[]): void {
           <textarea class="edit-text" rows="3"
           >${escapeHtml(quote.text)}</textarea>
           <input type="date" class="edit-date"
-            value="${escapeHtml(quote.date.slice(0, 10))}" />
+            value="${toISODate(quote.date)}" />
           <div class="form-actions">
             <button type="button"
               class="btn-save">Uložit</button>
