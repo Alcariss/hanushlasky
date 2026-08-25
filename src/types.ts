@@ -28,6 +28,11 @@ export type ApiConfig = {
   cacheTtlMs: number;
 };
 
+export type NewQuote = {
+  text: string;
+  date: string;
+};
+
 export type Diagnostics = {
   endpoint: string;
   source: 'primary' | 'fallback' | 'cache';

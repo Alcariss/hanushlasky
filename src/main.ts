@@ -1,6 +1,6 @@
 import './styles/main.css';
 import { APP_CONFIG, UI_CONFIG } from './config';
-import { fetchQuotes } from './lib/api';
+import { createQuote, fetchQuotes } from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate } from './lib/format';
 import type { Diagnostics, Quote } from './types';
@@ -23,13 +23,48 @@ app.innerHTML = `
   <main class="container">
     <header class="header">
       <h1>${escapeHtml(UI_CONFIG.appName)}</h1>
-      <p class="subtitle">Read-only MVP. Add/Edit/Delete will come in next slices.</p>
+      <p class="subtitle">
+        Sledování a ukládání nezapomenutelných citátů
+      </p>
     </header>
 
-    <section class="coming-soon">
-      <button disabled aria-disabled="true">➕ Přidat (coming soon)</button>
-      <button disabled aria-disabled="true">✏️ Upravit (coming soon)</button>
-      <button disabled aria-disabled="true">🗑️ Smazat (coming soon)</button>
+    <section class="actions">
+      <button id="toggle-add" type="button">
+        ➕ Přidat
+      </button>
+      <button disabled aria-disabled="true">
+        ✏️ Upravit (coming soon)
+      </button>
+      <button disabled aria-disabled="true">
+        🗑️ Smazat (coming soon)
+      </button>
+    </section>
+
+    <section id="add-form-section" class="add-form hidden">
+      <form id="add-form">
+        <label for="add-text">Citát</label>
+        <textarea
+          id="add-text"
+          rows="3"
+          required
+          placeholder="Zadej citát..."
+        ></textarea>
+        <label for="add-date">Datum</label>
+        <input
+          id="add-date"
+          type="date"
+          required
+        />
+        <div class="form-actions">
+          <button type="submit" id="add-submit">
+            Uložit
+          </button>
+          <button type="button" id="add-cancel">
+            Zrušit
+          </button>
+        </div>
+        <p id="add-error" class="form-error hidden"></p>
+      </form>
     </section>
 
     <section id="status"></section>
@@ -41,6 +76,68 @@ app.innerHTML = `
 const statusNode = requiredNode<HTMLElement>('#status');
 const quotesNode = requiredNode<HTMLElement>('#quotes');
 const debugNode = requiredNode<HTMLElement>('#debug');
+
+const toggleAddBtn = requiredNode<HTMLButtonElement>(
+  '#toggle-add'
+);
+const addFormSection = requiredNode<HTMLElement>(
+  '#add-form-section'
+);
+const addForm = requiredNode<HTMLFormElement>('#add-form');
+const addText = requiredNode<HTMLTextAreaElement>('#add-text');
+const addDate = requiredNode<HTMLInputElement>('#add-date');
+const addSubmit = requiredNode<HTMLButtonElement>(
+  '#add-submit'
+);
+const addCancel = requiredNode<HTMLButtonElement>(
+  '#add-cancel'
+);
+const addError = requiredNode<HTMLElement>('#add-error');
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+toggleAddBtn.addEventListener('click', () => {
+  const isHidden = addFormSection.classList.toggle('hidden');
+  if (!isHidden) {
+    addDate.value = addDate.value || todayISO();
+    addText.focus();
+  }
+});
+
+addCancel.addEventListener('click', () => {
+  addFormSection.classList.add('hidden');
+  addForm.reset();
+  addError.classList.add('hidden');
+});
+
+addForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  addError.classList.add('hidden');
+  addSubmit.disabled = true;
+  addSubmit.textContent = 'Ukládám...';
+
+  try {
+    await createQuote({
+      text: addText.value.trim(),
+      date: addDate.value
+    });
+
+    addForm.reset();
+    addFormSection.classList.add('hidden');
+    await refreshQuotes();
+  } catch (error) {
+    const msg = error instanceof Error
+      ? error.message
+      : String(error);
+    addError.textContent = msg;
+    addError.classList.remove('hidden');
+  } finally {
+    addSubmit.disabled = false;
+    addSubmit.textContent = 'Uložit';
+  }
+});
 
 function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
   statusNode.className = `status ${kind}`;
@@ -84,22 +181,7 @@ function renderDebug(diagnostics: Diagnostics): void {
   `;
 }
 
-async function bootstrap(): Promise<void> {
-  const cached = loadCache();
-  if (cached && cached.quotes.length > 0) {
-    renderQuotes(cached.quotes);
-    setStatus(`Zobrazuji cache (${cacheAgeText(cached.ageMs)}), aktualizuji...`, 'info');
-    renderDebug({
-      endpoint: APP_CONFIG.apiUrlPrimary,
-      source: 'cache',
-      fetchedAt: new Date(Date.now() - cached.ageMs).toISOString(),
-      cacheAgeSeconds: Math.floor(cached.ageMs / 1000),
-      error: null
-    });
-  } else {
-    setStatus('Načítám citáty...', 'info');
-  }
-
+async function refreshQuotes(): Promise<void> {
   try {
     const { quotes, diagnostics } = await fetchQuotes();
     saveCache(quotes);
@@ -107,10 +189,16 @@ async function bootstrap(): Promise<void> {
     setStatus('Citáty načteny.', 'success');
     renderDebug(diagnostics);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error
+      ? error.message
+      : String(error);
 
+    const cached = loadCache();
     if (cached && cached.quotes.length > 0) {
-      setStatus('Server není dostupný. Zobrazuji uložené citáty.', 'error');
+      setStatus(
+        'Server není dostupný. Zobrazuji uložené citáty.',
+        'error'
+      );
       renderDebug({
         endpoint: APP_CONFIG.apiUrlPrimary,
         source: 'cache',
@@ -121,8 +209,16 @@ async function bootstrap(): Promise<void> {
       return;
     }
 
-    setStatus('Nepodařilo se načíst citáty. Obnov stránku nebo zkus později.', 'error');
-    quotesNode.innerHTML = '<button id="retry" type="button">Zkusit znovu</button>';
+    setStatus(
+      'Nepodařilo se načíst citáty. '
+        + 'Obnov stránku nebo zkus později.',
+      'error'
+    );
+    quotesNode.innerHTML = `
+      <button id="retry" type="button">
+        Zkusit znovu
+      </button>
+    `;
     renderDebug({
       endpoint: APP_CONFIG.apiUrlPrimary,
       source: 'primary',
@@ -131,11 +227,38 @@ async function bootstrap(): Promise<void> {
       error: message
     });
 
-    const retry = document.querySelector<HTMLButtonElement>('#retry');
+    const retry = document.querySelector<HTMLButtonElement>(
+      '#retry'
+    );
     retry?.addEventListener('click', () => {
       window.location.reload();
     });
   }
+}
+
+async function bootstrap(): Promise<void> {
+  const cached = loadCache();
+  if (cached && cached.quotes.length > 0) {
+    renderQuotes(cached.quotes);
+    setStatus(
+      `Zobrazuji cache (${cacheAgeText(cached.ageMs)}), `
+        + 'aktualizuji...',
+      'info'
+    );
+    renderDebug({
+      endpoint: APP_CONFIG.apiUrlPrimary,
+      source: 'cache',
+      fetchedAt: new Date(
+        Date.now() - cached.ageMs
+      ).toISOString(),
+      cacheAgeSeconds: Math.floor(cached.ageMs / 1000),
+      error: null
+    });
+  } else {
+    setStatus('Načítám citáty...', 'info');
+  }
+
+  await refreshQuotes();
 }
 
 bootstrap();

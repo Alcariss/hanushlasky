@@ -1,5 +1,10 @@
 import { APP_CONFIG } from '../config';
-import type { ApiResponse, Diagnostics, Quote } from '../types';
+import type {
+  ApiResponse,
+  Diagnostics,
+  NewQuote,
+  Quote
+} from '../types';
 
 function appendToken(url: URL): void {
   if (APP_CONFIG.apiToken) {
@@ -83,4 +88,41 @@ export async function fetchQuotes(): Promise<{ quotes: Quote[]; diagnostics: Dia
 
     return readEndpoint(APP_CONFIG.apiUrlFallback, 'fallback');
   }
+}
+
+export async function createQuote(
+  input: NewQuote
+): Promise<Quote> {
+  const url = new URL(APP_CONFIG.apiUrlPrimary);
+  url.searchParams.set('action', 'add');
+  appendToken(url);
+
+  const response = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({
+      text: input.text,
+      date: input.date
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = (
+    await response.json()
+  ) as ApiResponse<Quote>;
+
+  if (!payload.success) {
+    throw new Error(
+      payload.message
+        ?? payload.errorCode
+        ?? 'Failed to create quote'
+    );
+  }
+
+  return payload.data;
 }

@@ -85,6 +85,93 @@ function doGet(e) {
   }
 }
 
+function doPost(e) {
+  if (!e || !e.parameter) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
+      message: 'Missing parameters'
+    });
+  }
+
+  if (!isAuthorized(e.parameter.token)) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: FETCH_ERROR_CODES.UNAUTHORIZED,
+      message: 'Unauthorized'
+    });
+  }
+
+  if (e.parameter.action !== 'add') {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
+      message: 'Unsupported action'
+    });
+  }
+
+  try {
+    var body = JSON.parse(e.postData.contents);
+  } catch (parseError) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: 'INVALID_BODY',
+      message: 'Invalid JSON body'
+    });
+  }
+
+  var text = String(body.text || '').trim();
+  var date = String(body.date || '').trim();
+
+  if (!text || !date) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: 'VALIDATION_ERROR',
+      message: 'Both text and date are required'
+    });
+  }
+
+  try {
+    var sheetId = normalizeSheetId(PRIMARY_SHEET_URL);
+    var sheet = SpreadsheetApp.openById(sheetId)
+      .getActiveSheet();
+    var now = new Date().toISOString();
+    var id = Utilities.getUuid();
+
+    sheet.appendRow([id, date, text, now, now]);
+
+    return jsonOutput({
+      success: true,
+      data: {
+        id: id,
+        date: date,
+        text: text,
+        createdAt: now,
+        updatedAt: now
+      },
+      meta: responseMeta('primary')
+    });
+  } catch (error) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
+      message: String(error)
+    });
+  }
+}
+
 function responseMeta(source) {
   return {
     apiVersion: API_VERSION,
