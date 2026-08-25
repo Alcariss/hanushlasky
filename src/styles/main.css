@@ -96,12 +96,14 @@ body {
 
 .add-form textarea,
 .add-form input[type="date"] {
+  display: block;
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #b8c6d8;
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;
+  box-sizing: border-box;
 }
 
 .add-form textarea:focus,
@@ -187,10 +189,22 @@ body {
   margin: 0;
 }
 
+.quote-view {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.quote-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .quote-actions {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex-shrink: 0;
 }
 
 .quote-actions button {
