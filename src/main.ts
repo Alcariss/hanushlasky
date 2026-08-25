@@ -27,12 +27,11 @@ function requiredNode<T extends HTMLElement>(selector: string): T {
 app.innerHTML = `
   <main class="container">
     <header class="header">
-      <h1>${escapeHtml(UI_CONFIG.appName)}</h1>
+      <h1>🍯 Hanuhlášky</h1>
     </header>
 
     <section id="add-form-section" class="add-form">
       <form id="add-form">
-        <label for="add-text">Nový citát</label>
         <textarea
           id="add-text"
           rows="3"
@@ -114,9 +113,23 @@ addForm.addEventListener('submit', async (event) => {
   }
 });
 
-function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
+let statusTimeout: ReturnType<typeof setTimeout> | null =
+  null;
+
+function setStatus(
+  message: string,
+  kind: 'info' | 'error' | 'success'
+): void {
+  if (statusTimeout) clearTimeout(statusTimeout);
   statusNode.className = `status ${kind}`;
   statusNode.textContent = message;
+
+  if (kind === 'success') {
+    statusTimeout = setTimeout(() => {
+      statusNode.textContent = '';
+      statusNode.className = '';
+    }, 3000);
+  }
 }
 
 function renderQuotes(quotes: Quote[]): void {
