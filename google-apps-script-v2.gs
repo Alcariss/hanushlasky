@@ -3,8 +3,8 @@ const SCHEMA_VERSION = 1;
 
 const TOKEN = 'replace-with-shared-token';
 
-const PRIMARY_SHEET_ID = 'replace-with-primary-sheet-id';
-const FALLBACK_SHEET_ID = 'replace-with-fallback-sheet-id';
+const PRIMARY_SHEET_URL = 'https://docs.google.com/spreadsheets/d/PRIMARY_SHEET_ID/edit';
+const FALLBACK_SHEET_URL = 'https://docs.google.com/spreadsheets/d/FALLBACK_SHEET_ID/edit';
 
 const FETCH_ERROR_CODES = {
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -47,7 +47,7 @@ function doGet(e) {
   }
 
   try {
-    const primaryRows = readSheetRows(PRIMARY_SHEET_ID);
+    const primaryRows = readSheetRows(PRIMARY_SHEET_URL);
     return jsonOutput({
       success: true,
       data: primaryRows,
@@ -67,7 +67,7 @@ function doGet(e) {
     }
 
     try {
-      const fallbackRows = readSheetRows(FALLBACK_SHEET_ID);
+      const fallbackRows = readSheetRows(FALLBACK_SHEET_URL);
       return jsonOutput({
         success: true,
         data: fallbackRows,
