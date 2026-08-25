@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
     base,
     plugins: [
       VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: [
         'icon-72x72.png',
         'icon-96x96.png',
@@ -68,6 +68,8 @@ export default defineConfig(({ mode }) => {
       },
       workbox: {
         navigateFallback: 'index.html',
+        skipWaiting: false,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/script\.google\.com\/macros\/s\/.*$/,

@@ -261,4 +261,77 @@ async function bootstrap(): Promise<void> {
   await refreshQuotes();
 }
 
+function setupUpdatePrompt(): void {
+  const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
+
+  let registration: ServiceWorkerRegistration | null = null;
+
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+
+  navigator.serviceWorker.ready.then((reg) => {
+    registration = reg;
+  });
+
+  setInterval(() => {
+    registration?.update();
+  }, UPDATE_CHECK_INTERVAL_MS);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      registration?.update();
+    }
+  });
+
+  navigator.serviceWorker.addEventListener(
+    'controllerchange',
+    () => {
+      window.location.reload();
+    }
+  );
+
+  let updateBanner: HTMLElement | null = null;
+
+  navigator.serviceWorker.getRegistration().then((reg) => {
+    if (!reg) return;
+
+    const showPrompt = () => {
+      if (updateBanner) return;
+      updateBanner = document.createElement('div');
+      updateBanner.className = 'update-banner';
+      updateBanner.innerHTML = `
+        <span>Nová verze je k dispozici.</span>
+        <button id="update-btn" type="button">
+          Aktualizovat
+        </button>
+      `;
+      document.body.prepend(updateBanner);
+
+      document.getElementById('update-btn')
+        ?.addEventListener('click', () => {
+          reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
+        });
+    };
+
+    if (reg.waiting) {
+      showPrompt();
+    }
+
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      newSW?.addEventListener('statechange', () => {
+        if (
+          newSW.state === 'installed'
+          && navigator.serviceWorker.controller
+        ) {
+          showPrompt();
+        }
+      });
+    });
+  });
+}
+
+setupUpdatePrompt();
+
 bootstrap();
