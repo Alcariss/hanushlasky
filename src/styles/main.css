@@ -187,6 +187,49 @@ body {
   margin: 0;
 }
 
+.quote-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.quote-actions button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+}
+
+.quote-actions button:active {
+  background: #e8eef5;
+}
+
+.quote-edit textarea,
+.quote-edit input[type="date"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #b8c6d8;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  margin-bottom: 0.4rem;
+}
+
+.quote-edit textarea:focus,
+.quote-edit input[type="date"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px #007bff33;
+}
+
+.edit-error {
+  color: #c0392b;
+  margin: 0.3rem 0 0;
+  font-size: 0.9rem;
+}
+
 .empty {
   padding: 1rem;
   border-radius: 12px;

@@ -1,6 +1,11 @@
 import './styles/main.css';
 import { APP_CONFIG, UI_CONFIG } from './config';
-import { createQuote, fetchQuotes } from './lib/api';
+import {
+  createQuote,
+  deleteQuote,
+  editQuote,
+  fetchQuotes
+} from './lib/api';
 import { loadCache, saveCache } from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate } from './lib/format';
 import type { Diagnostics, Quote } from './types';
@@ -110,20 +115,149 @@ function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
 
 function renderQuotes(quotes: Quote[]): void {
   if (quotes.length === 0) {
-    quotesNode.innerHTML = '<p class="empty">Žádné citáty nenalezeny.</p>';
+    quotesNode.innerHTML =
+      '<p class="empty">Žádné citáty nenalezeny.</p>';
     return;
   }
 
   quotesNode.innerHTML = quotes
     .map(
       (quote) => `
-      <article class="quote-card">
-        <p class="quote-text">"${escapeHtml(quote.text)}"</p>
-        <p class="quote-date">${escapeHtml(formatDate(quote.date))}</p>
+      <article class="quote-card" data-id="${escapeHtml(quote.id)}">
+        <div class="quote-view">
+          <p class="quote-text">
+            "${escapeHtml(quote.text)}"
+          </p>
+          <p class="quote-date">
+            ${escapeHtml(formatDate(quote.date))}
+          </p>
+          <div class="quote-actions">
+            <button type="button" class="btn-edit"
+              data-id="${escapeHtml(quote.id)}">✏️</button>
+            <button type="button" class="btn-delete"
+              data-id="${escapeHtml(quote.id)}">🗑️</button>
+          </div>
+        </div>
+        <div class="quote-edit hidden">
+          <textarea class="edit-text" rows="3"
+          >${escapeHtml(quote.text)}</textarea>
+          <input type="date" class="edit-date"
+            value="${escapeHtml(quote.date.slice(0, 10))}" />
+          <div class="form-actions">
+            <button type="button"
+              class="btn-save">Uložit</button>
+            <button type="button"
+              class="btn-cancel">Zrušit</button>
+          </div>
+          <p class="edit-error hidden"></p>
+        </div>
       </article>
     `
     )
     .join('');
+
+  quotesNode.querySelectorAll('.btn-edit').forEach((btn) => {
+    btn.addEventListener('click', handleEditClick);
+  });
+
+  quotesNode.querySelectorAll('.btn-delete').forEach((btn) => {
+    btn.addEventListener('click', handleDeleteClick);
+  });
+
+  quotesNode.querySelectorAll('.btn-cancel').forEach((btn) => {
+    btn.addEventListener('click', handleCancelClick);
+  });
+
+  quotesNode.querySelectorAll('.btn-save').forEach((btn) => {
+    btn.addEventListener('click', handleSaveClick);
+  });
+}
+
+function handleEditClick(event: Event): void {
+  const btn = event.currentTarget as HTMLElement;
+  const card = btn.closest('.quote-card') as HTMLElement;
+  card.querySelector('.quote-view')
+    ?.classList.add('hidden');
+  card.querySelector('.quote-edit')
+    ?.classList.remove('hidden');
+}
+
+function handleCancelClick(event: Event): void {
+  const btn = event.currentTarget as HTMLElement;
+  const card = btn.closest('.quote-card') as HTMLElement;
+  card.querySelector('.quote-view')
+    ?.classList.remove('hidden');
+  card.querySelector('.quote-edit')
+    ?.classList.add('hidden');
+  card.querySelector('.edit-error')
+    ?.classList.add('hidden');
+}
+
+async function handleSaveClick(
+  event: Event
+): Promise<void> {
+  const btn = event.currentTarget as HTMLButtonElement;
+  const card = btn.closest('.quote-card') as HTMLElement;
+  const id = card.dataset.id ?? '';
+  const textarea = card.querySelector(
+    '.edit-text'
+  ) as HTMLTextAreaElement;
+  const dateInput = card.querySelector(
+    '.edit-date'
+  ) as HTMLInputElement;
+  const errorEl = card.querySelector(
+    '.edit-error'
+  ) as HTMLElement;
+
+  const text = textarea.value.trim();
+  const date = dateInput.value;
+
+  if (!text || !date) {
+    errorEl.textContent = 'Vyplň text i datum.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Ukládám...';
+  errorEl.classList.add('hidden');
+
+  try {
+    await editQuote({ id, text, date });
+    await refreshQuotes();
+  } catch (error) {
+    const msg = error instanceof Error
+      ? error.message
+      : String(error);
+    errorEl.textContent = msg;
+    errorEl.classList.remove('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Uložit';
+  }
+}
+
+async function handleDeleteClick(
+  event: Event
+): Promise<void> {
+  const btn = event.currentTarget as HTMLButtonElement;
+  const id = btn.dataset.id ?? '';
+
+  if (!confirm('Opravdu smazat tento citát?')) {
+    return;
+  }
+
+  btn.disabled = true;
+
+  try {
+    await deleteQuote(id);
+    await refreshQuotes();
+  } catch (error) {
+    const msg = error instanceof Error
+      ? error.message
+      : String(error);
+    alert(msg);
+    btn.disabled = false;
+  }
 }
 
 function renderDebug(diagnostics: Diagnostics): void {

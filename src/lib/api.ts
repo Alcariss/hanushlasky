@@ -2,6 +2,7 @@ import { APP_CONFIG } from '../config';
 import type {
   ApiResponse,
   Diagnostics,
+  EditQuote,
   NewQuote,
   Quote
 } from '../types';
@@ -123,4 +124,70 @@ export async function createQuote(
   }
 
   return payload.data;
+}
+
+export async function editQuote(
+  input: EditQuote
+): Promise<Quote> {
+  const url = new URL(APP_CONFIG.apiUrlPrimary);
+  url.searchParams.set('action', 'edit');
+  url.searchParams.set('id', input.id);
+  url.searchParams.set('text', input.text);
+  url.searchParams.set('date', input.date);
+  appendToken(url);
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = (
+    await response.json()
+  ) as ApiResponse<Quote>;
+
+  if (!payload.success) {
+    throw new Error(
+      payload.message
+        ?? payload.errorCode
+        ?? 'Failed to edit quote'
+    );
+  }
+
+  return payload.data;
+}
+
+export async function deleteQuote(id: string): Promise<void> {
+  const url = new URL(APP_CONFIG.apiUrlPrimary);
+  url.searchParams.set('action', 'delete');
+  url.searchParams.set('id', id);
+  appendToken(url);
+
+  const response = await fetch(url.toString(), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const payload = (
+    await response.json()
+  ) as ApiResponse<null>;
+
+  if (!payload.success) {
+    throw new Error(
+      payload.message
+        ?? payload.errorCode
+        ?? 'Failed to delete quote'
+    );
+  }
 }

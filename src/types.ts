@@ -33,6 +33,12 @@ export type NewQuote = {
   date: string;
 };
 
+export type EditQuote = {
+  id: string;
+  text: string;
+  date: string;
+};
+
 export type Diagnostics = {
   endpoint: string;
   source: 'primary' | 'fallback' | 'cache';

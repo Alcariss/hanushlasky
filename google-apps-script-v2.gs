@@ -28,7 +28,8 @@ function doGet(e) {
 
   var action = e.parameter.action;
 
-  if (action !== 'fetch' && action !== 'add') {
+  var supported = ['fetch', 'add', 'edit', 'delete'];
+  if (supported.indexOf(action) === -1) {
     return jsonOutput({
       success: false,
       data: null,
@@ -50,6 +51,14 @@ function doGet(e) {
 
   if (action === 'add') {
     return handleAdd(e.parameter);
+  }
+
+  if (action === 'edit') {
+    return handleEdit(e.parameter);
+  }
+
+  if (action === 'delete') {
+    return handleDelete(e.parameter);
   }
 
   return handleFetch();
@@ -128,6 +137,132 @@ function handleAdd(params) {
         updatedAt: now
       },
       meta: responseMeta('primary')
+    });
+  } catch (error) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
+      message: String(error)
+    });
+  }
+}
+
+function handleEdit(params) {
+  var id = String(params.id || '').trim();
+  var text = String(params.text || '').trim();
+  var date = String(params.date || '').trim();
+
+  if (!id || !text || !date) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: 'VALIDATION_ERROR',
+      message: 'id, text, and date are required'
+    });
+  }
+
+  try {
+    var sheetId = normalizeSheetId(PRIMARY_SHEET_URL);
+    var sheet = SpreadsheetApp.openById(sheetId)
+      .getActiveSheet();
+    var values = sheet.getDataRange().getValues();
+    var headers = values[0].map(function (v) {
+      return String(v).trim().toLowerCase();
+    });
+
+    var idCol = headers.indexOf('id');
+    var textCol = headers.indexOf('text');
+    var dateCol = headers.indexOf('date');
+    var updatedAtCol = headers.indexOf('updated_at');
+    var createdAtCol = headers.indexOf('created_at');
+
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][idCol]).trim() === id) {
+        var now = new Date().toISOString();
+        sheet.getRange(i + 1, textCol + 1).setValue(text);
+        sheet.getRange(i + 1, dateCol + 1).setValue(date);
+        sheet.getRange(i + 1, updatedAtCol + 1)
+          .setValue(now);
+
+        return jsonOutput({
+          success: true,
+          data: {
+            id: id,
+            date: date,
+            text: text,
+            createdAt: String(
+              values[i][createdAtCol] || ''
+            ).trim(),
+            updatedAt: now
+          },
+          meta: responseMeta('primary')
+        });
+      }
+    }
+
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: 'NOT_FOUND',
+      message: 'Quote not found'
+    });
+  } catch (error) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: FETCH_ERROR_CODES.INTERNAL_ERROR,
+      message: String(error)
+    });
+  }
+}
+
+function handleDelete(params) {
+  var id = String(params.id || '').trim();
+
+  if (!id) {
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: 'VALIDATION_ERROR',
+      message: 'id is required'
+    });
+  }
+
+  try {
+    var sheetId = normalizeSheetId(PRIMARY_SHEET_URL);
+    var sheet = SpreadsheetApp.openById(sheetId)
+      .getActiveSheet();
+    var values = sheet.getDataRange().getValues();
+    var headers = values[0].map(function (v) {
+      return String(v).trim().toLowerCase();
+    });
+
+    var idCol = headers.indexOf('id');
+
+    for (var i = 1; i < values.length; i++) {
+      if (String(values[i][idCol]).trim() === id) {
+        sheet.deleteRow(i + 1);
+
+        return jsonOutput({
+          success: true,
+          data: null,
+          meta: responseMeta('primary')
+        });
+      }
+    }
+
+    return jsonOutput({
+      success: false,
+      data: null,
+      meta: responseMeta('primary'),
+      errorCode: 'NOT_FOUND',
+      message: 'Quote not found'
     });
   } catch (error) {
     return jsonOutput({
