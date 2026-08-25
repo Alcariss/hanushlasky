@@ -1,14 +1,12 @@
 import './styles/main.css';
 import { APP_CONFIG, UI_CONFIG } from './config';
-import {
-  createQuote,
-  deleteQuote,
-  editQuote,
-  fetchQuotes
-} from './lib/api';
-import { loadCache, saveCache } from './lib/cache';
+import * as api from './lib/api';
+import * as cache from './lib/cache';
 import { cacheAgeText, escapeHtml, formatDate } from './lib/format';
+import { createQuoteStore } from './lib/quote-store';
 import type { Diagnostics, Quote } from './types';
+
+const store = createQuoteStore({ api, cache });
 
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) {
@@ -93,14 +91,16 @@ addForm.addEventListener('submit', async (event) => {
   addSubmit.textContent = 'Ukládám...';
 
   try {
-    await createQuote({
+    const { quotes, diagnostics } = await store.create({
       text: addText.value.trim(),
       date: addDate.value
     });
 
     addText.value = '';
     addDate.value = todayISO();
-    await refreshQuotes();
+    renderQuotes(quotes);
+    setStatus('Citát uložen.', 'success');
+    renderDebug(diagnostics);
   } catch (error) {
     const msg = error instanceof Error
       ? error.message
@@ -237,8 +237,10 @@ async function handleSaveClick(
   errorEl.classList.add('hidden');
 
   try {
-    await editQuote({ id, text, date });
-    await refreshQuotes();
+    const { quotes, diagnostics } = await store.edit({ id, text, date });
+    renderQuotes(quotes);
+    setStatus('Citát upraven.', 'success');
+    renderDebug(diagnostics);
   } catch (error) {
     const msg = error instanceof Error
       ? error.message
@@ -264,8 +266,10 @@ async function handleDeleteClick(
   btn.disabled = true;
 
   try {
-    await deleteQuote(id);
-    await refreshQuotes();
+    const { quotes, diagnostics } = await store.delete(id);
+    renderQuotes(quotes);
+    setStatus('Citát smazán.', 'success');
+    renderDebug(diagnostics);
   } catch (error) {
     const msg = error instanceof Error
       ? error.message
@@ -296,31 +300,23 @@ function renderDebug(diagnostics: Diagnostics): void {
 
 async function refreshQuotes(): Promise<void> {
   try {
-    const { quotes, diagnostics } = await fetchQuotes();
-    saveCache(quotes);
+    const { quotes, diagnostics } = await store.refresh();
     renderQuotes(quotes);
-    setStatus('Citáty načteny.', 'success');
+
+    if (diagnostics.error) {
+      setStatus(
+        'Server není dostupný. Zobrazuji uložené citáty.',
+        'error'
+      );
+    } else {
+      setStatus('Citáty načteny.', 'success');
+    }
+
     renderDebug(diagnostics);
   } catch (error) {
     const message = error instanceof Error
       ? error.message
       : String(error);
-
-    const cached = loadCache();
-    if (cached && cached.quotes.length > 0) {
-      setStatus(
-        'Server není dostupný. Zobrazuji uložené citáty.',
-        'error'
-      );
-      renderDebug({
-        endpoint: APP_CONFIG.apiUrlPrimary,
-        source: 'cache',
-        fetchedAt: new Date().toISOString(),
-        cacheAgeSeconds: Math.floor(cached.ageMs / 1000),
-        error: message
-      });
-      return;
-    }
 
     setStatus(
       'Nepodařilo se načíst citáty. '
@@ -350,7 +346,7 @@ async function refreshQuotes(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
-  const cached = loadCache();
+  const cached = store.loadCached();
   if (cached && cached.quotes.length > 0) {
     renderQuotes(cached.quotes);
     setStatus(
