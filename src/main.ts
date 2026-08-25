@@ -23,26 +23,11 @@ app.innerHTML = `
   <main class="container">
     <header class="header">
       <h1>${escapeHtml(UI_CONFIG.appName)}</h1>
-      <p class="subtitle">
-        Sledování a ukládání nezapomenutelných citátů
-      </p>
     </header>
 
-    <section class="actions">
-      <button id="toggle-add" type="button">
-        ➕ Přidat
-      </button>
-      <button disabled aria-disabled="true">
-        ✏️ Upravit (coming soon)
-      </button>
-      <button disabled aria-disabled="true">
-        🗑️ Smazat (coming soon)
-      </button>
-    </section>
-
-    <section id="add-form-section" class="add-form hidden">
+    <section id="add-form-section" class="add-form">
       <form id="add-form">
-        <label for="add-text">Citát</label>
+        <label for="add-text">Nový citát</label>
         <textarea
           id="add-text"
           rows="3"
@@ -59,9 +44,6 @@ app.innerHTML = `
           <button type="submit" id="add-submit">
             Uložit
           </button>
-          <button type="button" id="add-cancel">
-            Zrušit
-          </button>
         </div>
         <p id="add-error" class="form-error hidden"></p>
       </form>
@@ -77,9 +59,6 @@ const statusNode = requiredNode<HTMLElement>('#status');
 const quotesNode = requiredNode<HTMLElement>('#quotes');
 const debugNode = requiredNode<HTMLElement>('#debug');
 
-const toggleAddBtn = requiredNode<HTMLButtonElement>(
-  '#toggle-add'
-);
 const addFormSection = requiredNode<HTMLElement>(
   '#add-form-section'
 );
@@ -89,28 +68,13 @@ const addDate = requiredNode<HTMLInputElement>('#add-date');
 const addSubmit = requiredNode<HTMLButtonElement>(
   '#add-submit'
 );
-const addCancel = requiredNode<HTMLButtonElement>(
-  '#add-cancel'
-);
 const addError = requiredNode<HTMLElement>('#add-error');
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-toggleAddBtn.addEventListener('click', () => {
-  const isHidden = addFormSection.classList.toggle('hidden');
-  if (!isHidden) {
-    addDate.value = addDate.value || todayISO();
-    addText.focus();
-  }
-});
-
-addCancel.addEventListener('click', () => {
-  addFormSection.classList.add('hidden');
-  addForm.reset();
-  addError.classList.add('hidden');
-});
+addDate.value = todayISO();
 
 addForm.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -124,8 +88,8 @@ addForm.addEventListener('submit', async (event) => {
       date: addDate.value
     });
 
-    addForm.reset();
-    addFormSection.classList.add('hidden');
+    addText.value = '';
+    addDate.value = todayISO();
     await refreshQuotes();
   } catch (error) {
     const msg = error instanceof Error
