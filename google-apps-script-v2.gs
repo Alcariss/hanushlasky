@@ -201,9 +201,14 @@ function mapRow(headers, row) {
   };
 }
 
-function migrateLegacyToV1(sourceSheetId, targetSheetId) {
-  var sourceId = normalizeSheetId(sourceSheetId);
-  var targetId = normalizeSheetId(targetSheetId);
+function migrateLegacyToV1(sourceSheetUrl, targetSheetUrl) {
+  var sourceId = normalizeSheetId(sourceSheetUrl || FALLBACK_SHEET_URL);
+  var targetId = normalizeSheetId(targetSheetUrl || PRIMARY_SHEET_URL);
+
+  if (sourceId === targetId) {
+    throw new Error('Source and target sheets must be different');
+  }
+
   var sourceSheet = SpreadsheetApp.openById(sourceId).getActiveSheet();
   var targetSheet = SpreadsheetApp.openById(targetId).getActiveSheet();
 
