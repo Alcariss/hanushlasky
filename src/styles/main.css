@@ -1,0 +1,117 @@
+:root {
+  color-scheme: light;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  line-height: 1.4;
+  background: radial-gradient(circle at top, #f5fbff 0%, #e7eef5 100%);
+  color: #112135;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+.header h1 {
+  margin-bottom: 0.3rem;
+}
+
+.subtitle {
+  color: #4a6078;
+  margin-top: 0;
+}
+
+.coming-soon {
+  display: flex;
+  gap: 0.6rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.coming-soon button {
+  border: 1px solid #b8c6d8;
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: #f2f6fb;
+  color: #6b7f97;
+}
+
+.status {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+}
+
+.status.info {
+  background: #deedff;
+}
+
+.status.success {
+  background: #dcf6e8;
+}
+
+.status.error {
+  background: #ffe6e6;
+}
+
+.quote-card {
+  background: #ffffffd1;
+  border: 1px solid #dce4ee;
+  border-radius: 12px;
+  padding: 0.85rem;
+  margin-bottom: 0.7rem;
+}
+
+.quote-text {
+  font-size: 1.03rem;
+  margin-bottom: 0.4rem;
+}
+
+.quote-date {
+  color: #5b728c;
+  margin: 0;
+}
+
+.empty {
+  padding: 1rem;
+  border-radius: 12px;
+  background: #eef4fb;
+}
+
+.debug {
+  margin-top: 1.2rem;
+  padding: 0.9rem;
+  border-radius: 10px;
+  background: #10243a;
+  color: #dbe8f7;
+}
+
+.debug h2 {
+  margin-top: 0;
+  margin-bottom: 0.4rem;
+  font-size: 1rem;
+}
+
+.debug dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+}
+
+.debug dt {
+  font-weight: 600;
+}
+
+.debug dd {
+  margin: 0;
+  word-break: break-word;
+}

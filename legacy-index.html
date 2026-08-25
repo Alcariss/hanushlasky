@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hlášky</title>
+  
+  <!-- PWA Meta Tags -->
+  <meta name="description" id="metaDescription" content="Sledování a ukládání nezapomenutelných citátů">
+  <meta name="theme-color" content="#007bff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" id="appleTitle" content="Hlášky">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Apple Touch Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 id="appTitle">Hlášky</h1>
+    </div>
+    
+    <div class="form-container">
+      <form id="quoteForm">
+        <div class="form-group">
+          <textarea id="quote" name="quote" required placeholder="Zadejte citát..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <input type="date" id="quoteDate" name="quoteDate" required autocomplete="off" style="-webkit-appearance: none; appearance: none;">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Uložit citát</button>
+      </form>
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="quotes-section">
+      <div id="quotesContainer">
+        <div class="loading">
+          <div class="spinner"></div>
+          Načítání citátů...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Quote Modal -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Upravit citát</h2>
+      <form id="editQuoteForm">
+        <div class="form-group">
+          <textarea id="editQuote" name="editQuote" required placeholder="Zadejte citát..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <input type="date" id="editQuoteDate" name="editQuoteDate" required autocomplete="off" style="-webkit-appearance: none; appearance: none;">
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Zrušit</button>
+          <button type="submit" class="btn btn-primary">Uložit změny</button>
+        </div>
+      </form>
+      <div class="status" id="editStatus"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Smazat citát</h2>
+      <p>Opravdu chcete smazat tento citát?</p>
+      <div class="quote-preview" id="deleteQuotePreview"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Zrušit</button>
+        <button type="button" class="btn btn-delete" onclick="confirmDelete()">Smazat</button>
+      </div>
+      <div class="status" id="deleteStatus"></div>
+    </div>
+  </div>
+
+  <!-- Version Info -->
+  <div id="versionInfo" class="version-info" title="Klikněte pro aktualizaci">
+    v1.2.6
+  </div>
+
+  <!-- Application Scripts -->
+  <script src="./config.js"></script>
+  <script src="./version.js"></script>
+  <script src="./js/errors.js"></script>
+  <script src="./js/cache.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/app.js"></script>
+  <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          await navigator.serviceWorker.register('./sw.js');
+          console.log('Service Worker registered');
+        } catch (error) {
+          console.log('Service Worker registration failed:', error);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

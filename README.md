@@ -1,5 +1,37 @@
 # Hlášky - Kids Quote Tracker
 
+## V2 Status (Current)
+
+The project is now migrating to a Vite + TypeScript + vite-plugin-pwa stack.
+Current implementation state is the read-only MVP vertical slice:
+
+- Reads quotes from Google Apps Script API (new envelope contract)
+- Stale-while-revalidate cache with offline read fallback
+- Installable PWA build output for GitHub Pages
+- Add/Edit/Delete visible as disabled "coming soon" controls
+
+Legacy app entrypoint has been preserved in `legacy-index.html`.
+
+### V2 Quick Start
+
+1. Copy `.env.example` to `.env`
+2. Set `VITE_API_URL_PRIMARY` and `VITE_API_TOKEN`
+3. Optional: set `VITE_API_URL_FALLBACK` and `VITE_BASE_PATH`
+4. Install and run:
+
+```bash
+npm install
+npm run dev
+```
+
+5. Build production bundle:
+
+```bash
+npm run build
+```
+
+Apps Script v2 starter is in `google-apps-script-v2.gs`.
+
 A simple PWA (Progressive Web App) for tracking and saving your child's memorable quotes. Works offline and can be installed on your phone's home screen.
 
 ## Features
