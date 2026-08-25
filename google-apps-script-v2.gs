@@ -124,7 +124,8 @@ function jsonOutput(payload) {
 }
 
 function readSheetRows(sheetId) {
-  const sheet = SpreadsheetApp.openById(sheetId).getActiveSheet();
+  const normalizedId = normalizeSheetId(sheetId);
+  const sheet = SpreadsheetApp.openById(normalizedId).getActiveSheet();
 
   if (sheet.getLastRow() < 1) {
     return [];
@@ -155,6 +156,28 @@ function readSheetRows(sheetId) {
   return rows;
 }
 
+function normalizeSheetId(value) {
+  if (value === null || value === undefined) {
+    throw new Error('Invalid argument: id (missing value)');
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    throw new Error('Invalid argument: id (empty value)');
+  }
+
+  if (raw.indexOf('docs.google.com/spreadsheets/d/') >= 0) {
+    const match = raw.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match || !match[1]) {
+      throw new Error('Invalid argument: id (could not parse from URL)');
+    }
+
+    return match[1];
+  }
+
+  return raw;
+}
+
 function validateHeaders(headers) {
   for (var i = 0; i < EXPECTED_HEADERS.length; i++) {
     if (headers.indexOf(EXPECTED_HEADERS[i]) === -1) {
@@ -179,8 +202,10 @@ function mapRow(headers, row) {
 }
 
 function migrateLegacyToV1(sourceSheetId, targetSheetId) {
-  var sourceSheet = SpreadsheetApp.openById(sourceSheetId).getActiveSheet();
-  var targetSheet = SpreadsheetApp.openById(targetSheetId).getActiveSheet();
+  var sourceId = normalizeSheetId(sourceSheetId);
+  var targetId = normalizeSheetId(targetSheetId);
+  var sourceSheet = SpreadsheetApp.openById(sourceId).getActiveSheet();
+  var targetSheet = SpreadsheetApp.openById(targetId).getActiveSheet();
 
   var sourceValues = sourceSheet.getDataRange().getValues();
   var now = new Date().toISOString();
