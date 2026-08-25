@@ -1,9 +1,9 @@
 :root {
   color-scheme: light;
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
-  line-height: 1.4;
-  background: radial-gradient(circle at top, #f5fbff 0%, #e7eef5 100%);
-  color: #112135;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  line-height: 1.5;
+  color: #333;
 }
 
 * {
@@ -12,16 +12,24 @@
 
 body {
   margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(
+    135deg, #667eea 0%, #764ba2 100%
+  );
 }
 
 .container {
-  max-width: 760px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 1.25rem;
 }
 
 .header h1 {
   margin-bottom: 0.3rem;
+  color: white;
+  text-align: center;
+  font-size: 2.2rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .subtitle {
@@ -75,11 +83,12 @@ body {
 }
 
 .add-form {
-  background: #ffffffd1;
-  border: 1px solid #dce4ee;
-  border-radius: 12px;
-  padding: 1rem;
+  background: white;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 16px;
+  padding: 1.25rem;
   margin-bottom: 1rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
 }
 
 .add-form label {
@@ -128,9 +137,12 @@ body {
 }
 
 .form-actions button[type="submit"] {
-  background: #007bff;
+  background: linear-gradient(
+    135deg, #667eea 0%, #764ba2 100%
+  );
   color: #fff;
-  border-color: #007bff;
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
 }
 
 .form-actions button[type="submit"]:disabled {
@@ -139,7 +151,7 @@ body {
 }
 
 .form-actions button[type="submit"]:not(:disabled):active {
-  background: #0062cc;
+  background: #5a67d8;
 }
 
 .form-actions button[type="button"] {
@@ -172,11 +184,13 @@ body {
 }
 
 .quote-card {
-  background: #ffffffd1;
-  border: 1px solid #dce4ee;
-  border-radius: 12px;
-  padding: 0.85rem;
-  margin-bottom: 0.7rem;
+  background: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 16px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease;
 }
 
 .quote-text {
