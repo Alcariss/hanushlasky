@@ -115,6 +115,12 @@ body {
   box-sizing: border-box;
 }
 
+.add-form input[type="date"] {
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .add-form textarea:focus,
 .add-form input[type="date"]:focus {
   outline: none;
@@ -226,6 +232,12 @@ body {
   font-size: 1rem;
   font-family: inherit;
   margin-bottom: 0.4rem;
+}
+
+.quote-edit input[type="date"] {
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .quote-edit textarea:focus,
