@@ -26,6 +26,9 @@ function requiredNode<T extends HTMLElement>(selector: string): T {
 app.innerHTML = `
   <main class="container">
     <header class="header">
+      <p class="build-version">
+        v${UI_CONFIG.buildSha} · ${UI_CONFIG.buildDate}
+      </p>
       <h1>🍯 Hanuhlášky</h1>
     </header>
 
@@ -57,11 +60,6 @@ app.innerHTML = `
     <section id="debug" class="debug"></section>
   </main>
 `;
-
-const buildVersion = document.createElement('footer');
-buildVersion.className = 'build-version';
-buildVersion.textContent = `v${UI_CONFIG.buildSha} · ${UI_CONFIG.buildDate}`;
-document.body.append(buildVersion);
 
 const statusNode = requiredNode<HTMLElement>('#status');
 const quotesNode = requiredNode<HTMLElement>('#quotes');
