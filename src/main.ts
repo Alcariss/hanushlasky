@@ -54,6 +54,9 @@ app.innerHTML = `
     <section id="status"></section>
     <section id="quotes"></section>
     <section id="debug" class="debug"></section>
+    <footer class="build-version">
+      v${UI_CONFIG.buildSha} · ${UI_CONFIG.buildDate}
+    </footer>
   </main>
 `;
 
@@ -150,9 +153,15 @@ function renderQuotes(quotes: Quote[]): void {
           <p class="quote-text">
             "${escapeHtml(quote.text)}"
           </p>
-          <p class="quote-date">
-            ${escapeHtml(formatDate(quote.date))}
-          </p>
+          <div class="quote-meta">
+            <p class="quote-date">
+              ${escapeHtml(formatDate(quote.date))}
+            </p>
+            <button type="button" class="btn-share"
+              aria-label="Sdílet citát" title="Sdílet citát"
+              data-text="${escapeHtml(quote.text)}"
+              data-date="${escapeHtml(formatDate(quote.date))}">↗</button>
+          </div>
         </div>
         <div class="quote-edit hidden">
           <textarea class="edit-text" rows="3"
@@ -178,6 +187,10 @@ function renderQuotes(quotes: Quote[]): void {
     el.addEventListener('click', handleCardClick);
   });
 
+  quotesNode.querySelectorAll('.btn-share').forEach((btn) => {
+    btn.addEventListener('click', handleShareClick);
+  });
+
   quotesNode.querySelectorAll('.btn-cancel').forEach((btn) => {
     btn.addEventListener('click', handleCancelClick);
   });
@@ -197,6 +210,31 @@ function handleCardClick(event: Event): void {
   view.classList.add('hidden');
   card.querySelector('.quote-edit')
     ?.classList.remove('hidden');
+}
+
+async function handleShareClick(event: Event): Promise<void> {
+  event.stopPropagation();
+  const button = event.currentTarget as HTMLButtonElement;
+  const text = button.dataset.text ?? '';
+  const date = button.dataset.date ?? '';
+
+  if (!navigator.share) {
+    setStatus('Sdílení tento prohlížeč nepodporuje.', 'error');
+    return;
+  }
+
+  try {
+    await navigator.share({
+      title: 'Hanuhlášky',
+      text: `"${text}"\n${date}`
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return;
+    }
+
+    setStatus('Citát se nepodařilo sdílet.', 'error');
+  }
 }
 
 function handleCancelClick(event: Event): void {

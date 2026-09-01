@@ -33,5 +33,7 @@ export const APP_CONFIG: ApiConfig = {
 
 export const UI_CONFIG = {
   appName: import.meta.env.VITE_APP_NAME ?? 'Hlášky',
+  buildDate: import.meta.env.VITE_BUILD_DATE ?? 'local',
+  buildSha: import.meta.env.VITE_BUILD_SHA ?? 'local',
   showDebug: new URLSearchParams(window.location.search).get('debug') === '1'
 };
