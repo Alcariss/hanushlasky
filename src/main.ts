@@ -55,11 +55,13 @@ app.innerHTML = `
     <section id="status"></section>
     <section id="quotes"></section>
     <section id="debug" class="debug"></section>
-    <footer class="build-version">
-      v${UI_CONFIG.buildSha} · ${UI_CONFIG.buildDate}
-    </footer>
   </main>
 `;
+
+const buildVersion = document.createElement('footer');
+buildVersion.className = 'build-version';
+buildVersion.textContent = `v${UI_CONFIG.buildSha} · ${UI_CONFIG.buildDate}`;
+document.body.append(buildVersion);
 
 const statusNode = requiredNode<HTMLElement>('#status');
 const quotesNode = requiredNode<HTMLElement>('#quotes');

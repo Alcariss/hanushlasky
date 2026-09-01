@@ -290,7 +290,7 @@ body {
 }
 
 .build-version {
-  bottom: max(0.25rem, env(safe-area-inset-bottom));
+  bottom: calc(0.25rem + env(safe-area-inset-bottom));
   color: rgba(255,255,255,0.78);
   font-size: 0.75rem;
   left: 0;
@@ -299,6 +299,7 @@ body {
   position: fixed;
   right: 0;
   text-align: center;
+  z-index: 1000;
 }
 
 .debug {
