@@ -1,4 +1,5 @@
 import './styles/main.css';
+import { createIcons, Share } from 'lucide';
 import { APP_CONFIG, UI_CONFIG } from './config';
 import * as api from './lib/api';
 import * as cache from './lib/cache';
@@ -160,7 +161,9 @@ function renderQuotes(quotes: Quote[]): void {
             <button type="button" class="btn-share"
               aria-label="Sdílet citát" title="Sdílet citát"
               data-text="${escapeHtml(quote.text)}"
-              data-date="${escapeHtml(formatDate(quote.date))}">↗</button>
+              data-date="${escapeHtml(formatDate(quote.date))}">
+              <i data-lucide="share" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
         <div class="quote-edit hidden">
@@ -182,6 +185,8 @@ function renderQuotes(quotes: Quote[]): void {
     `
     )
     .join('');
+
+  createIcons({ icons: { Share } });
 
   quotesNode.querySelectorAll('.quote-view').forEach((el) => {
     el.addEventListener('click', handleCardClick);
