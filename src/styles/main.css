@@ -21,7 +21,7 @@ body {
 .container {
   max-width: 600px;
   margin: 0 auto;
-  padding: 1.25rem;
+  padding: 1.25rem 1.25rem 3rem;
 }
 
 .header h1 {
@@ -290,9 +290,14 @@ body {
 }
 
 .build-version {
-  margin: 1.25rem 0 0.25rem;
+  bottom: max(0.25rem, env(safe-area-inset-bottom));
   color: rgba(255,255,255,0.78);
   font-size: 0.75rem;
+  left: 0;
+  margin: 0;
+  pointer-events: none;
+  position: fixed;
+  right: 0;
   text-align: center;
 }
 
