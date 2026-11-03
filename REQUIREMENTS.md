@@ -2,6 +2,10 @@
 
 Requirements documented in WHAT/TRIGGER/CONSTRAINTS format for AI agent implementation.
 
+> **Historical.** These describe the legacy v1 app (Google Sheets, Apps Script, email
+> notifications). The app now runs on pwa-kit: data in Grist behind the pwa-kit worker,
+> Google/GitHub sign-in, and ntfy notifications. See README.md.
+
 ---
 
 ## Quote Management

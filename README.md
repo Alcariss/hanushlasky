@@ -1,235 +1,104 @@
-# Hlášky - Kids Quote Tracker
+# 🍯 Hanuhlášky
 
-## V2 Status (Current)
+A small installable PWA for writing down the memorable things a kid says. Czech UI,
+works offline, and the family gets a push notification on their phones for every new
+quote.
 
-The project is now migrating to a Vite + TypeScript + vite-plugin-pwa stack.
-Current implementation state is the read-only MVP vertical slice:
+Built on [pwa-kit](https://github.com/Alcariss/pwa-kit): the app is hosted on GitHub
+Pages, the quotes live in Grist behind the shared `pwa-kit-api` Cloudflare Worker, and
+family members sign in with Google or GitHub.
 
-- Reads quotes from Google Apps Script API (new envelope contract)
-- Stale-while-revalidate cache with offline read fallback
-- Installable PWA build output for GitHub Pages
-- Add/Edit/Delete visible as disabled "coming soon" controls
-
-Legacy app entrypoint has been preserved in `legacy-index.html`.
-
-### V2 Quick Start
-
-1. Copy `.env.example` to `.env`
-2. Set `VITE_API_URL_PRIMARY` and `VITE_API_TOKEN`
-3. Optional: set `VITE_API_URL_FALLBACK` and `VITE_BASE_PATH`
-4. Install and run:
-
-```bash
-npm install
-npm run dev
+```mermaid
+flowchart LR
+  App["Hlášky<br/>(GitHub Pages)"] -- "/hanushlasky?action=…" --> Worker["pwa-kit-api<br/>(Cloudflare Worker)"]
+  Worker -- records API --> Grist[("Grist<br/>r7UEV7ogACUR / Sheet1")]
+  Worker -- new quote --> Ntfy["ntfy.sh topic"] --> Phones["family phones"]
 ```
 
-5. Build production bundle:
+## Develop
 
 ```bash
+cp .env.example .env   # VITE_API_URL_PRIMARY=https://pwa-kit-api.hanushlasky-api.workers.dev/hanushlasky
+npm install
+npm run dev            # http://localhost:5173 (allowed by the worker's DEV_ORIGINS)
+npm test
+npm run typecheck
 npm run build
 ```
 
-Apps Script v2 starter is in `google-apps-script-v2.gs`.
+Add `?debug=1` to the URL to see where the data came from (server or offline copy).
 
-A simple PWA (Progressive Web App) for tracking and saving your child's memorable quotes. Works offline and can be installed on your phone's home screen.
+| File | What it is |
+|---|---|
+| `src/main.ts` | The app: sign-in screen, install hint, list, add, edit, delete and share quotes |
+| `src/quotes.ts` | The quote record, as the worker returns it |
+| `src/texts.ts` | Czech strings for sign-in and the install hint |
+| `src/styles.css` | App styles; the kit's sign-in, install hint, update banner and debug panel are themed through `--pk-*` |
+| `public/icon-*.png` | App icons used by the manifest |
 
-## Features
+The quotes are cached in `localStorage` under `hlasky:v2:quotes`, so the app opens
+instantly and works offline. Signing out clears it.
 
-- 📱 Works as a mobile app (PWA)
-- 💾 Stores quotes in Google Sheets
-- 🔄 Works offline
-- ✏️ Edit and delete quotes
-- 🔍 Duplicate detection
-- 🎨 Customizable for any child
+Update the kit with `npm update @alcariss/pwa-kit` (stays within `^1`).
 
-## Demo
+## Deploy
 
-The app displays quotes sorted by date (newest first) and allows you to add new quotes with a simple form.
+Every push to `main` deploys through the kit's shared workflow
+(`Alcariss/pwa-kit/.github/workflows/deploy-pages.yml@v1`): it runs the tests, builds
+with base path `/hanushlasky/` and the commit SHA as the version, and publishes to
+GitHub Pages.
 
-## Setup Instructions
+The repository needs:
 
-### Prerequisites
+- *Settings → Pages → Source*: **GitHub Actions**
+- Repository secret `VITE_API_URL_PRIMARY` =
+  `https://pwa-kit-api.hanushlasky-api.workers.dev/hanushlasky`
 
-- A Google account
-- A place to host static files (GitHub Pages, Netlify, Vercel, or any web server)
+The old secrets `VITE_API_URL_FALLBACK` and `VITE_API_TOKEN` (Apps Script) are no
+longer used and can be deleted.
 
----
+## Backend (pwa-kit worker)
 
-### Step 1: Create a Google Sheet
+The app is the `hanushlasky` entry in pwa-kit's `worker/src/apps.ts`: Grist document
+`r7UEV7ogACUR`, table `Sheet1` with Text columns `date` (`YYYY-MM-DD`), `text`,
+`created_at` and `updated_at`. All signed-in family members share the same quotes.
 
-1. Go to [Google Sheets](https://sheets.google.com) and create a new spreadsheet
-2. Name it something like "Kid's Quotes"
-3. Copy the **Sheet ID** from the URL:
-   ```
-   https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID_HERE/edit
-   ```
-   The Sheet ID is the long string between `/d/` and `/edit`
+Worker secrets for this app (run in `pwa-kit/worker`, then `npx wrangler deploy`):
 
----
-
-### Step 2: Set Up Google Apps Script
-
-1. In your Google Sheet, go to **Extensions → Apps Script**
-2. Delete any existing code in the editor
-3. Copy the entire contents of `google-apps-script-updated.gs` from this repository
-4. Paste it into the Apps Script editor
-5. Click **Save** (💾 icon or Ctrl+S)
-6. Click **Deploy → New deployment**
-7. Configure the deployment:
-   - Click the gear icon next to "Select type" and choose **Web app**
-   - **Description**: "Quotes API v1" (or any description)
-   - **Execute as**: "Me"
-   - **Who has access**: "Anyone"
-8. Click **Deploy**
-9. Click **Authorize access** and follow the prompts
-   - You may see "Google hasn't verified this app" - click **Advanced → Go to [project name] (unsafe)**
-   - This is safe because you're authorizing your own script
-10. Copy the **Web app URL** - you'll need this for the config
-
-The URL looks like:
-```
-https://script.google.com/macros/s/AKfycby.../exec
+```bash
+npx wrangler secret put ALLOWED_EMAILS_HANUSHLASKY   # me@example.com,partner@example.com,…
+npx wrangler secret put NTFY_TOPIC_HANUSHLASKY       # long random topic, e.g. `openssl rand -hex 16`
 ```
 
----
+Who may sign in is controlled only by `ALLOWED_EMAILS_HANUSHLASKY`; removing an email
+revokes that person on their next request. Their Google account must also be a test user
+of the worker's Google OAuth client while its consent screen is in *Testing*.
 
-### Step 3: Configure the App
+## Installing on iPhone
 
-Edit `config.js` with your values:
+The sign-in screen shows step-by-step instructions for the browser in use (Safari,
+Chrome, or an in-app browser like Messenger). Install **before** signing in: an app
+added to the Home Screen on iOS has its own storage, so a sign-in done in Safari does
+not carry over.
 
-```javascript
-const APP_CONFIG = {
-  // Your Google Apps Script deployment URL from Step 2
-  SCRIPT_URL: 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec',
-  
-  // Your Google Sheet ID from Step 1
-  SHEET_ID: 'YOUR_SHEET_ID',
-  
-  // Your child's name (forms the title, e.g., "Hanu" → "Hanuhlášky")
-  KID_NAME: 'Hanu',
-  
-  // Emoji shown in the title
-  EMOJI: '🍯',
-  
-  // Timeouts (usually no need to change)
-  TIMEOUT: 8000,
-  REFRESH_DELAY: 1000,
-  AUTO_HIDE_DELAY: 3000
-};
-```
+## Notifications (ntfy)
 
----
+Whenever someone adds a quote, the worker pushes it through [ntfy](https://ntfy.sh) to
+everyone subscribed to the app's secret topic (edits and deletes do not notify). Tapping
+the notification opens the app.
 
-### Step 4: Deploy the Web App (GitHub Pages)
+For each family member:
 
-1. Fork this repository or create a new one
-2. Edit `config.js` with your values from Steps 1 and 2
-3. Commit and push your changes
-4. Go to **Settings → Pages**
-5. Under "Source", select **Deploy from a branch**
-6. Choose **main** branch and **/ (root)** folder
-7. Click **Save**
-8. Your app will be available at `https://yourusername.github.io/repository-name/`
+1. Install the ntfy app: [iPhone](https://apps.apple.com/app/ntfy/id1625396347),
+   [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
+2. Tap **+**, enter the topic name (the value of `NTFY_TOPIC_HANUSHLASKY`), keep the
+   server `ntfy.sh`, and subscribe.
+3. Allow notifications when asked.
 
----
-
-### Step 5: Install as Mobile App (Optional)
-
-#### iOS (iPhone/iPad)
-1. Open the app URL in Safari
-2. Tap the **Share** button (square with arrow)
-3. Scroll down and tap **Add to Home Screen**
-4. Name it and tap **Add**
-
-#### Android
-1. Open the app URL in Chrome
-2. Tap the **three dots** menu
-3. Tap **Add to Home screen** or **Install app**
-4. Confirm the installation
-
----
-
-## Customization
-
-### Changing the Child's Name
-
-Edit `config.js`:
-```javascript
-KID_NAME: 'Emma',  // Changes title to "Emmahlášky"
-EMOJI: '🦋',       // Changes emoji
-```
-
-### Custom App Icons
-
-Replace these files with your own icons (keep the same filenames):
-- `icon-180.png` (180×180 pixels) - iOS home screen
-- `icon-192.png` (192×192 pixels) - Android
-- `icon-512.png` (512×512 pixels) - Android splash screen
-
----
-
-## File Structure
-
-```
-├── index.html                    # Main app
-├── config.js                     # ⚙️ Configuration (edit this!)
-├── version.js                    # App version
-├── manifest.json                 # PWA manifest
-├── sw.js                         # Service worker (offline support)
-├── google-apps-script-updated.gs # Google Apps Script code
-├── tests.html                    # Browser tests
-├── icon-180.png                  # iOS icon
-├── icon-192.png                  # Android icon
-└── icon-512.png                  # Large icon
-```
-
----
-
-## Troubleshooting
-
-### Quotes not loading
-
-1. Check browser console for errors (F12 → Console)
-2. Verify your `SCRIPT_URL` in `config.js` is correct
-3. Make sure the Google Apps Script is deployed with "Anyone" access
-4. Try redeploying the Apps Script (Deploy → New deployment)
-
-### "Google hasn't verified this app" warning
-
-This is normal for personal Apps Scripts. Click **Advanced → Go to [project name]** to proceed.
-
-### Changes not appearing
-
-The app uses caching for offline support. To force refresh:
-- **Browser**: Ctrl+Shift+R (or Cmd+Shift+R on Mac)
-- **iOS PWA**: Delete and re-add the app
-- **Android PWA**: Clear app data in settings
-
-### Duplicate quotes appearing
-
-The app has built-in duplicate detection, but if duplicates exist in your sheet:
-1. Open the Google Sheet directly
-2. Delete duplicate rows manually
-
----
-
-## Updating the App
-
-When you make changes:
-
-1. Update `version.js` with a new version number
-2. Commit and push to GitHub (or re-upload files)
-3. On mobile PWA: tap the version badge to update, or reinstall the app
-
----
+Anyone who knows the topic can read and post to it, so share it privately like a
+password. To change it, set a new `NTFY_TOPIC_HANUSHLASKY` and have everyone subscribe
+again. Without the secret, nothing is sent.
 
 ## License
 
-MIT License - Feel free to use and modify for your family!
-
----
-
-## Credits
-
-Built with ❤️ for parents who want to remember their kids' precious words.
+MIT. Built with ❤️ for parents who want to remember their kids' precious words.

@@ -1,133 +1,172 @@
-import './styles/main.css';
+import '@alcariss/pwa-kit/styles.css';
+import './styles.css';
+import { registerSW } from 'virtual:pwa-register';
 import { createIcons, Share } from 'lucide';
-import { APP_CONFIG, UI_CONFIG } from './config';
-import * as api from './lib/api';
-import * as cache from './lib/cache';
-import { cacheAgeText, escapeHtml, formatDate } from './lib/format';
-import { createQuoteStore } from './lib/quote-store';
-import type { Diagnostics, Quote } from './types';
+import {
+  ApiError,
+  AUTH_ERROR_CODES,
+  createApiClient,
+  createAuth,
+  createCache,
+  createResource,
+  createStore,
+  escapeHtml,
+  formatAge,
+  formatIsoDate,
+  isDebugEnabled,
+  readApiConfig,
+  renderDiagnostics,
+  renderLoginScreen,
+  requiredElement,
+  setupInstallHint,
+  setupUpdatePrompt,
+  toIsoDate,
+  type Diagnostics,
+  type InstallHint
+} from '@alcariss/pwa-kit';
+import { shareText, toQuote, toQuoteParams, type Quote, type QuoteInput } from './quotes';
+import { AUTH_MESSAGES, INSTALL_HINT_STRINGS, LOGIN_LABELS, SESSION_EXPIRED } from './texts';
 
-const store = createQuoteStore({ api, cache });
+const APP_TITLE = '🍯 Hanuhlášky';
+const SHARE_TITLE = 'Hanuhlášky';
+const LOCALE = 'cs-CZ';
 
-const app = document.querySelector<HTMLDivElement>('#app');
-if (!app) {
-  throw new Error('App mount node not found');
-}
-
-function requiredNode<T extends HTMLElement>(selector: string): T {
-  const node = document.querySelector<T>(selector);
-  if (!node) {
-    throw new Error(`Required node not found: ${selector}`);
-  }
-
-  return node;
-}
-
-app.innerHTML = `
-  <main class="container">
-    <header class="header">
-      <p class="build-version">
-        v${UI_CONFIG.buildSha} · ${UI_CONFIG.buildDate}
-      </p>
-      <h1>🍯 Hanuhlášky</h1>
-    </header>
-
-    <section id="add-form-section" class="add-form">
-      <form id="add-form">
-        <textarea
-          id="add-text"
-          rows="3"
-          required
-          placeholder="Zadej citát..."
-        ></textarea>
-        <label for="add-date">Datum</label>
-        <input
-          id="add-date"
-          type="date"
-          required
-        />
-        <div class="form-actions">
-          <button type="submit" id="add-submit">
-            Uložit
-          </button>
-        </div>
-        <p id="add-error" class="form-error hidden"></p>
-      </form>
-    </section>
-
-    <section id="status"></section>
-    <section id="quotes"></section>
-    <section id="debug" class="debug"></section>
-  </main>
-`;
-
-const statusNode = requiredNode<HTMLElement>('#status');
-const quotesNode = requiredNode<HTMLElement>('#quotes');
-const debugNode = requiredNode<HTMLElement>('#debug');
-
-const addFormSection = requiredNode<HTMLElement>(
-  '#add-form-section'
-);
-const addForm = requiredNode<HTMLFormElement>('#add-form');
-const addText = requiredNode<HTMLTextAreaElement>('#add-text');
-const addDate = requiredNode<HTMLInputElement>('#add-date');
-const addSubmit = requiredNode<HTMLButtonElement>(
-  '#add-submit'
-);
-const addError = requiredNode<HTMLElement>('#add-error');
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function toISODate(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return todayISO();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-addDate.value = todayISO();
-
-addForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  addError.classList.add('hidden');
-  addSubmit.disabled = true;
-  addSubmit.textContent = 'Ukládám...';
-
-  try {
-    const { quotes, diagnostics } = await store.create({
-      text: addText.value.trim(),
-      date: addDate.value
-    });
-
-    addText.value = '';
-    addDate.value = todayISO();
-    renderQuotes(quotes);
-    setStatus('Citát uložen.', 'success');
-    renderDebug(diagnostics);
-  } catch (error) {
-    const msg = error instanceof Error
-      ? error.message
-      : String(error);
-    addError.textContent = msg;
-    addError.classList.remove('hidden');
-  } finally {
-    addSubmit.disabled = false;
-    addSubmit.textContent = 'Uložit';
-  }
+const config = readApiConfig(import.meta.env);
+const auth = createAuth({ apiUrl: config.primaryUrl });
+const client = createApiClient(config, { getSessionToken: () => auth.current()?.token ?? null });
+const store = createStore<Quote, QuoteInput>({
+  resource: createResource(client, { mapRow: toQuote, toParams: toQuoteParams }),
+  cache: createCache<Quote>('hlasky:v2:quotes')
 });
+const root = requiredElement('#app');
+const signInRequired = config.authProviders.length > 0;
 
-let statusTimeout: ReturnType<typeof setTimeout> | null =
-  null;
+setupUpdatePrompt(registerSW, { message: 'Nová verze je k dispozici.', buttonLabel: 'Aktualizovat' });
 
-function setStatus(
-  message: string,
-  kind: 'info' | 'error' | 'success'
-): void {
-  if (statusTimeout) clearTimeout(statusTimeout);
+let installHint: InstallHint | null = null;
+
+/** Shown before sign-in too: an app installed on iOS has its own storage and starts signed out. */
+function showInstallHint(target: HTMLElement): void {
+  installHint?.dispose();
+  installHint = setupInstallHint(target, {
+    storageKey: 'hlasky:install-hint-dismissed',
+    signInRequired,
+    strings: INSTALL_HINT_STRINGS
+  });
+}
+
+function showLogin(message: string | null = null): void {
+  store.clear();
+  renderLoginScreen(root, {
+    title: APP_TITLE,
+    providers: config.authProviders,
+    message,
+    labels: LOGIN_LABELS,
+    onSelect: (provider) => auth.login(provider)
+  });
+  // Above the sign-in buttons: on iPhone, installing first saves signing in twice.
+  const hintSlot = document.createElement('div');
+  requiredElement('.pk-login h1', root).after(hintSlot);
+  showInstallHint(hintSlot);
+}
+
+function formatDate(date: string): string {
+  return formatIsoDate(date, LOCALE);
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** Sends the user back to sign-in when the session expired or was revoked. */
+function handleAuthError(error: unknown): boolean {
+  if (error instanceof ApiError && AUTH_ERROR_CODES.includes(error.code)) {
+    auth.logout();
+    showLogin(error.code === 'FORBIDDEN' ? AUTH_MESSAGES.not_allowed : SESSION_EXPIRED);
+    return true;
+  }
+  return false;
+}
+
+function showApp(): void {
+  root.innerHTML = `
+    <main class="container">
+      <header class="header">
+        <p class="build-version">v${escapeHtml(__APP_VERSION__)}</p>
+        <h1>${escapeHtml(APP_TITLE)}</h1>
+      </header>
+
+      <div id="install-hint"></div>
+
+      <section class="add-form">
+        <form id="add-form">
+          <textarea id="add-text" rows="3" required placeholder="Zadej citát..."></textarea>
+          <label for="add-date">Datum</label>
+          <input id="add-date" type="date" required />
+          <div class="form-actions">
+            <button type="submit" id="add-submit">Uložit</button>
+          </div>
+          <p id="add-error" class="form-error hidden"></p>
+        </form>
+      </section>
+
+      <section id="status" role="status"></section>
+      <section id="quotes"></section>
+      <section id="debug"></section>
+      ${signInRequired ? '<p class="logout"><button id="logout" type="button">Odhlásit se</button></p>' : ''}
+    </main>
+  `;
+  showInstallHint(requiredElement('#install-hint'));
+
+  const addForm = requiredElement<HTMLFormElement>('#add-form');
+  const addText = requiredElement<HTMLTextAreaElement>('#add-text');
+  const addDate = requiredElement<HTMLInputElement>('#add-date');
+  const addSubmit = requiredElement<HTMLButtonElement>('#add-submit');
+  const addError = requiredElement('#add-error');
+  addDate.value = toIsoDate();
+
+  addForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    addError.classList.add('hidden');
+    addSubmit.disabled = true;
+    addSubmit.textContent = 'Ukládám...';
+
+    try {
+      const result = await store.create({ text: addText.value, date: addDate.value });
+      addText.value = '';
+      addDate.value = toIsoDate();
+      renderQuotes(result);
+      setStatus('Citát uložen.', 'success');
+    } catch (error) {
+      if (handleAuthError(error)) {
+        return;
+      }
+      addError.textContent = errorMessage(error);
+      addError.classList.remove('hidden');
+    } finally {
+      addSubmit.disabled = false;
+      addSubmit.textContent = 'Uložit';
+    }
+  });
+
+  requiredElement('#quotes').addEventListener('click', (event) => void onQuoteClick(event));
+
+  document.querySelector('#logout')?.addEventListener('click', () => {
+    auth.logout();
+    showLogin();
+  });
+}
+
+let statusTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function setStatus(message: string, kind: 'info' | 'error' | 'success'): void {
+  const statusNode = document.querySelector<HTMLElement>('#status');
+  if (!statusNode) {
+    return;
+  }
+  if (statusTimeout) {
+    clearTimeout(statusTimeout);
+  }
   statusNode.className = `status ${kind}`;
   statusNode.textContent = message;
 
@@ -139,25 +178,16 @@ function setStatus(
   }
 }
 
-function renderQuotes(quotes: Quote[]): void {
-  if (quotes.length === 0) {
-    quotesNode.innerHTML =
-      '<p class="empty">Žádné citáty nenalezeny.</p>';
-    return;
-  }
-
-  quotesNode.innerHTML = quotes
-    .map(
-      (quote) => `
+function renderQuotes(result: { items: Quote[]; diagnostics?: Diagnostics }): void {
+  const quotesNode = requiredElement('#quotes');
+  quotesNode.innerHTML = result.items.length === 0
+    ? '<p class="empty">Žádné citáty nenalezeny.</p>'
+    : result.items.map((quote) => `
       <article class="quote-card" data-id="${escapeHtml(quote.id)}">
         <div class="quote-view">
-          <p class="quote-text">
-            "${escapeHtml(quote.text)}"
-          </p>
+          <p class="quote-text">"${escapeHtml(quote.text)}"</p>
           <div class="quote-meta">
-            <p class="quote-date">
-              ${escapeHtml(formatDate(quote.date))}
-            </p>
+            <p class="quote-date">${escapeHtml(formatDate(quote.date))}</p>
             <button type="button" class="btn-share"
               aria-label="Sdílet citát" title="Sdílet citát"
               data-text="${escapeHtml(quote.text)}"
@@ -167,110 +197,85 @@ function renderQuotes(quotes: Quote[]): void {
           </div>
         </div>
         <div class="quote-edit hidden">
-          <textarea class="edit-text" rows="3"
-          >${escapeHtml(quote.text)}</textarea>
-          <input type="date" class="edit-date"
-            value="${toISODate(quote.date)}" />
+          <textarea class="edit-text" rows="3">${escapeHtml(quote.text)}</textarea>
+          <input type="date" class="edit-date" value="${escapeHtml(quote.date)}" />
           <div class="form-actions">
-            <button type="button"
-              class="btn-save">Uložit</button>
-            <button type="button"
-              class="btn-cancel">Zrušit</button>
-            <button type="button"
-              class="btn-delete">Smazat</button>
+            <button type="button" class="btn-save">Uložit</button>
+            <button type="button" class="btn-cancel">Zrušit</button>
+            <button type="button" class="btn-delete">Smazat</button>
           </div>
           <p class="edit-error hidden"></p>
         </div>
       </article>
-    `
-    )
-    .join('');
+    `).join('');
 
   createIcons({ icons: { Share } });
-
-  quotesNode.querySelectorAll('.quote-view').forEach((el) => {
-    el.addEventListener('click', handleCardClick);
-  });
-
-  quotesNode.querySelectorAll('.btn-share').forEach((btn) => {
-    btn.addEventListener('click', handleShareClick);
-  });
-
-  quotesNode.querySelectorAll('.btn-cancel').forEach((btn) => {
-    btn.addEventListener('click', handleCancelClick);
-  });
-
-  quotesNode.querySelectorAll('.btn-save').forEach((btn) => {
-    btn.addEventListener('click', handleSaveClick);
-  });
-
-  quotesNode.querySelectorAll('.btn-delete').forEach((btn) => {
-    btn.addEventListener('click', handleDeleteClick);
-  });
+  renderDebug(result.diagnostics);
 }
 
-function handleCardClick(event: Event): void {
-  const view = event.currentTarget as HTMLElement;
-  const card = view.closest('.quote-card') as HTMLElement;
-  view.classList.add('hidden');
-  card.querySelector('.quote-edit')
-    ?.classList.remove('hidden');
+function renderDebug(diagnostics: Diagnostics | undefined): void {
+  if (isDebugEnabled() && diagnostics) {
+    renderDiagnostics(requiredElement('#debug'), diagnostics, { Verze: __APP_VERSION__ });
+  }
 }
 
-async function handleShareClick(event: Event): Promise<void> {
-  event.stopPropagation();
-  const button = event.currentTarget as HTMLButtonElement;
-  const text = button.dataset.text ?? '';
-  const date = button.dataset.date ?? '';
+async function onQuoteClick(event: Event): Promise<void> {
+  const target = event.target as Element;
+  const card = target.closest<HTMLElement>('.quote-card');
+  if (!card) {
+    return;
+  }
 
+  const share = target.closest<HTMLButtonElement>('.btn-share');
+  if (share) {
+    await shareQuote(share.dataset.text ?? '', share.dataset.date ?? '');
+    return;
+  }
+
+  if (target.closest('.quote-view')) {
+    toggleEdit(card, true);
+    return;
+  }
+
+  const button = target.closest<HTMLButtonElement>('button');
+  if (button?.classList.contains('btn-cancel')) {
+    toggleEdit(card, false);
+  } else if (button?.classList.contains('btn-save')) {
+    await saveQuote(card, button);
+  } else if (button?.classList.contains('btn-delete')) {
+    await deleteQuote(card, button);
+  }
+}
+
+function toggleEdit(card: HTMLElement, editing: boolean): void {
+  requiredElement('.quote-view', card).classList.toggle('hidden', editing);
+  requiredElement('.quote-edit', card).classList.toggle('hidden', !editing);
+  if (!editing) {
+    requiredElement('.edit-error', card).classList.add('hidden');
+  }
+}
+
+async function shareQuote(text: string, date: string): Promise<void> {
   if (!navigator.share) {
     setStatus('Sdílení tento prohlížeč nepodporuje.', 'error');
     return;
   }
 
   try {
-    await navigator.share({
-      title: 'Hanuhlášky',
-      text: `"${text}"\n${date}`
-    });
+    await navigator.share({ title: SHARE_TITLE, text: shareText(text, date) });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
       return;
     }
-
     setStatus('Citát se nepodařilo sdílet.', 'error');
   }
 }
 
-function handleCancelClick(event: Event): void {
-  const btn = event.currentTarget as HTMLElement;
-  const card = btn.closest('.quote-card') as HTMLElement;
-  card.querySelector('.quote-view')
-    ?.classList.remove('hidden');
-  card.querySelector('.quote-edit')
-    ?.classList.add('hidden');
-  card.querySelector('.edit-error')
-    ?.classList.add('hidden');
-}
-
-async function handleSaveClick(
-  event: Event
-): Promise<void> {
-  const btn = event.currentTarget as HTMLButtonElement;
-  const card = btn.closest('.quote-card') as HTMLElement;
+async function saveQuote(card: HTMLElement, button: HTMLButtonElement): Promise<void> {
   const id = card.dataset.id ?? '';
-  const textarea = card.querySelector(
-    '.edit-text'
-  ) as HTMLTextAreaElement;
-  const dateInput = card.querySelector(
-    '.edit-date'
-  ) as HTMLInputElement;
-  const errorEl = card.querySelector(
-    '.edit-error'
-  ) as HTMLElement;
-
-  const text = textarea.value.trim();
-  const date = dateInput.value;
+  const text = requiredElement<HTMLTextAreaElement>('.edit-text', card).value.trim();
+  const date = requiredElement<HTMLInputElement>('.edit-date', card).value;
+  const errorEl = requiredElement('.edit-error', card);
 
   if (!text || !date) {
     errorEl.textContent = 'Vyplň text i datum.';
@@ -278,137 +283,79 @@ async function handleSaveClick(
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = 'Ukládám...';
+  button.disabled = true;
+  button.textContent = 'Ukládám...';
   errorEl.classList.add('hidden');
 
   try {
-    const { quotes, diagnostics } = await store.edit({ id, text, date });
-    renderQuotes(quotes);
+    renderQuotes(await store.update(id, { text, date }));
     setStatus('Citát upraven.', 'success');
-    renderDebug(diagnostics);
   } catch (error) {
-    const msg = error instanceof Error
-      ? error.message
-      : String(error);
-    errorEl.textContent = msg;
+    if (handleAuthError(error)) {
+      return;
+    }
+    errorEl.textContent = errorMessage(error);
     errorEl.classList.remove('hidden');
-    btn.disabled = false;
-    btn.textContent = 'Uložit';
+    button.disabled = false;
+    button.textContent = 'Uložit';
   }
 }
 
-async function handleDeleteClick(
-  event: Event
-): Promise<void> {
-  const btn = event.currentTarget as HTMLButtonElement;
-  const card = btn.closest('.quote-card') as HTMLElement;
-  const id = card.dataset.id ?? '';
-
+async function deleteQuote(card: HTMLElement, button: HTMLButtonElement): Promise<void> {
   if (!confirm('Opravdu smazat tento citát?')) {
     return;
   }
 
-  btn.disabled = true;
+  button.disabled = true;
 
   try {
-    const { quotes, diagnostics } = await store.delete(id);
-    renderQuotes(quotes);
+    renderQuotes(await store.remove(card.dataset.id ?? ''));
     setStatus('Citát smazán.', 'success');
-    renderDebug(diagnostics);
   } catch (error) {
-    const msg = error instanceof Error
-      ? error.message
-      : String(error);
-    alert(msg);
-    btn.disabled = false;
+    if (handleAuthError(error)) {
+      return;
+    }
+    alert(errorMessage(error));
+    button.disabled = false;
   }
-}
-
-function renderDebug(diagnostics: Diagnostics): void {
-  if (!UI_CONFIG.showDebug) {
-    debugNode.innerHTML = '';
-    return;
-  }
-
-  debugNode.innerHTML = `
-    <h2>Debug</h2>
-    <dl>
-      <dt>Endpoint</dt><dd>${escapeHtml(diagnostics.endpoint)}</dd>
-      <dt>Source</dt><dd>${escapeHtml(diagnostics.source)}</dd>
-      <dt>Fetched</dt><dd>${escapeHtml(diagnostics.fetchedAt)}</dd>
-      <dt>Cache age</dt><dd>${diagnostics.cacheAgeSeconds ?? 'n/a'}</dd>
-      <dt>Error</dt><dd>${escapeHtml(diagnostics.error ?? 'none')}</dd>
-      <dt>Cache TTL</dt><dd>${Math.floor(APP_CONFIG.cacheTtlMs / 1000)} sec</dd>
-    </dl>
-  `;
 }
 
 async function refreshQuotes(): Promise<void> {
   try {
-    const { quotes, diagnostics } = await store.refresh();
-    renderQuotes(quotes);
-
-    if (diagnostics.error) {
-      setStatus(
-        'Server není dostupný. Zobrazuji uložené citáty.',
-        'error'
-      );
+    const result = await store.refresh();
+    renderQuotes(result);
+    if (result.diagnostics.source === 'cache') {
+      setStatus('Server není dostupný. Zobrazuji uložené citáty.', 'error');
     } else {
       setStatus('Citáty načteny.', 'success');
     }
-
-    renderDebug(diagnostics);
   } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : String(error);
-
-    setStatus(
-      'Nepodařilo se načíst citáty. '
-        + 'Obnov stránku nebo zkus později.',
-      'error'
-    );
-    quotesNode.innerHTML = `
-      <button id="retry" type="button">
-        Zkusit znovu
-      </button>
-    `;
-    renderDebug({
-      endpoint: APP_CONFIG.apiUrlPrimary,
-      source: 'primary',
-      fetchedAt: new Date().toISOString(),
-      cacheAgeSeconds: null,
-      error: message
-    });
-
-    const retry = document.querySelector<HTMLButtonElement>(
-      '#retry'
-    );
-    retry?.addEventListener('click', () => {
-      window.location.reload();
-    });
+    if (handleAuthError(error)) {
+      return;
+    }
+    console.error(error);
+    setStatus('Nepodařilo se načíst citáty. Obnov stránku nebo zkus později.', 'error');
+    requiredElement('#quotes').innerHTML = '<button id="retry" type="button">Zkusit znovu</button>';
+    requiredElement('#retry').addEventListener('click', () => window.location.reload());
   }
 }
 
-async function bootstrap(): Promise<void> {
+async function start(): Promise<void> {
+  const outcome = auth.completeLogin();
+  if (outcome.status === 'failed') {
+    showLogin(AUTH_MESSAGES[outcome.reason] ?? AUTH_MESSAGES.provider_error);
+    return;
+  }
+  if (signInRequired && auth.current() === null) {
+    showLogin();
+    return;
+  }
+
+  showApp();
   const cached = store.loadCached();
-  if (cached && cached.quotes.length > 0) {
-    renderQuotes(cached.quotes);
-    setStatus(
-      `Zobrazuji cache (${cacheAgeText(cached.ageMs)}), `
-        + 'aktualizuji...',
-      'info'
-    );
-    renderDebug({
-      endpoint: APP_CONFIG.apiUrlPrimary,
-      source: 'cache',
-      fetchedAt: new Date(
-        Date.now() - cached.ageMs
-      ).toISOString(),
-      cacheAgeSeconds: Math.floor(cached.ageMs / 1000),
-      error: null
-    });
+  if (cached && cached.items.length > 0) {
+    renderQuotes(cached);
+    setStatus(`Zobrazuji uložené citáty (${formatAge(cached.ageMs, LOCALE)}), aktualizuji...`, 'info');
   } else {
     setStatus('Načítám citáty...', 'info');
   }
@@ -416,77 +363,4 @@ async function bootstrap(): Promise<void> {
   await refreshQuotes();
 }
 
-function setupUpdatePrompt(): void {
-  const UPDATE_CHECK_INTERVAL_MS = 60 * 1000;
-
-  let registration: ServiceWorkerRegistration | null = null;
-
-  if (!('serviceWorker' in navigator)) {
-    return;
-  }
-
-  navigator.serviceWorker.ready.then((reg) => {
-    registration = reg;
-  });
-
-  setInterval(() => {
-    registration?.update();
-  }, UPDATE_CHECK_INTERVAL_MS);
-
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      registration?.update();
-    }
-  });
-
-  navigator.serviceWorker.addEventListener(
-    'controllerchange',
-    () => {
-      window.location.reload();
-    }
-  );
-
-  let updateBanner: HTMLElement | null = null;
-
-  navigator.serviceWorker.getRegistration().then((reg) => {
-    if (!reg) return;
-
-    const showPrompt = () => {
-      if (updateBanner) return;
-      updateBanner = document.createElement('div');
-      updateBanner.className = 'update-banner';
-      updateBanner.innerHTML = `
-        <span>Nová verze je k dispozici.</span>
-        <button id="update-btn" type="button">
-          Aktualizovat
-        </button>
-      `;
-      document.body.prepend(updateBanner);
-
-      document.getElementById('update-btn')
-        ?.addEventListener('click', () => {
-          reg.waiting?.postMessage({ type: 'SKIP_WAITING' });
-        });
-    };
-
-    if (reg.waiting) {
-      showPrompt();
-    }
-
-    reg.addEventListener('updatefound', () => {
-      const newSW = reg.installing;
-      newSW?.addEventListener('statechange', () => {
-        if (
-          newSW.state === 'installed'
-          && navigator.serviceWorker.controller
-        ) {
-          showPrompt();
-        }
-      });
-    });
-  });
-}
-
-setupUpdatePrompt();
-
-bootstrap();
+void start();
