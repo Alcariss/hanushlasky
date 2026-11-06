@@ -282,3 +282,16 @@ body {
   background: #10243a;
   color: #dbe8f7;
 }
+
+.pk-push:not([hidden]) {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+/* The kit's display: flex would otherwise beat the hidden attribute. */
+.pk-push[hidden] {
+  display: none;
+}

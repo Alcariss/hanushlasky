@@ -12,7 +12,7 @@ family members sign in with Google or GitHub.
 flowchart LR
   App["Hlášky<br/>(GitHub Pages)"] -- "/hanushlasky?action=…" --> Worker["pwa-kit-api<br/>(Cloudflare Worker)"]
   Worker -- records API --> Grist[("Grist<br/>r7UEV7ogACUR / Sheet1")]
-  Worker -- new quote --> Ntfy["ntfy.sh topic"] --> Phones["family phones"]
+  Worker -- "new quote (Web Push)" --> Phones["family phones<br/>(Hlášky on the Home Screen)"]
 ```
 
 ## Develop
@@ -32,9 +32,10 @@ Add `?debug=1` to the URL to see where the data came from (server or offline cop
 |---|---|
 | `src/main.ts` | The app: sign-in screen, install hint, list, add, edit, delete and share quotes |
 | `src/quotes.ts` | The quote record, as the worker returns it |
-| `src/texts.ts` | Czech strings for sign-in and the install hint |
+| `src/texts.ts` | Czech strings for sign-in, the install hint and the notifications switch |
 | `src/styles.css` | App styles; the kit's sign-in, install hint, update banner and debug panel are themed through `--pk-*` |
 | `public/icon-*.png` | App icons used by the manifest |
+| `public/pwa-192x192.png` | Copy of the 192 px icon; the kit's service worker shows it on notifications |
 
 The quotes are cached in `localStorage` under `hlasky:v2:quotes`, so the app opens
 instantly and works offline. Signing out clears it.
@@ -67,7 +68,6 @@ Worker secrets for this app (run in `pwa-kit/worker`, then `npx wrangler deploy`
 
 ```bash
 npx wrangler secret put ALLOWED_EMAILS_HANUSHLASKY   # me@example.com,partner@example.com,…
-npx wrangler secret put NTFY_TOPIC_HANUSHLASKY       # long random topic, e.g. `openssl rand -hex 16`
 ```
 
 Who may sign in is controlled only by `ALLOWED_EMAILS_HANUSHLASKY`; removing an email
@@ -81,23 +81,30 @@ Chrome, or an in-app browser like Messenger). Install **before** signing in: an 
 added to the Home Screen on iOS has its own storage, so a sign-in done in Safari does
 not carry over.
 
-## Notifications (ntfy)
+## Notifications (Web Push)
 
-Whenever someone adds a quote, the worker pushes it through [ntfy](https://ntfy.sh) to
-everyone subscribed to the app's secret topic (edits and deletes do not notify). Tapping
-the notification opens the app.
+Whenever someone adds a quote, everyone else who turned notifications on gets it as a
+system notification, with a badge on the app icon. Tapping it opens the app. Edits and
+deletes do not notify, and you are not notified about your own quotes.
 
-For each family member:
+On iPhone (iOS 16.4 or later), for each family member:
 
-1. Install the ntfy app: [iPhone](https://apps.apple.com/app/ntfy/id1625396347),
-   [Android](https://play.google.com/store/apps/details?id=io.heckel.ntfy).
-2. Tap **+**, enter the topic name (the value of `NTFY_TOPIC_HANUSHLASKY`), keep the
-   server `ntfy.sh`, and subscribe.
-3. Allow notifications when asked.
+1. Open https://alcariss.github.io/hanushlasky/ in Safari and add Hlášky to the Home
+   Screen, following the steps on the screen.
+2. Open Hlášky **from the Home Screen** and sign in there.
+3. Turn on **Upozornění na nové hlášky** and allow notifications when asked.
 
-Anyone who knows the topic can read and post to it, so share it privately like a
-password. To change it, set a new `NTFY_TOPIC_HANUSHLASKY` and have everyone subscribe
-again. Without the secret, nothing is sent.
+In Safari itself the switch is not shown: iOS delivers notifications only to apps
+added to the Home Screen. On Android and desktop Chrome the switch works in the browser
+too.
+
+If notifications were blocked, allow them in *Settings → Notifications → Hlášky* (iPhone)
+or the site settings of the browser. Signing out turns notifications off for that
+device.
+
+The worker side is configured once for all pwa-kit apps (VAPID keys and the `PUSH` KV
+store, see the pwa-kit README); the `hanushlasky` entry has `push` on its `quotes`
+table.
 
 ## License
 

@@ -8,12 +8,14 @@ import {
   createApiClient,
   createAuth,
   createCache,
+  createPushNotifications,
   createResource,
   createStore,
   escapeHtml,
   formatAge,
   formatIsoDate,
   isDebugEnabled,
+  mountPushToggle,
   readApiConfig,
   renderDiagnostics,
   renderLoginScreen,
@@ -22,14 +24,16 @@ import {
   setupUpdatePrompt,
   toIsoDate,
   type Diagnostics,
-  type InstallHint
+  type InstallHint,
+  type PushToggle
 } from '@alcariss/pwa-kit';
 import { shareText, toQuote, toQuoteParams, type Quote, type QuoteInput } from './quotes';
-import { AUTH_MESSAGES, INSTALL_HINT_STRINGS, LOGIN_LABELS, SESSION_EXPIRED } from './texts';
+import { AUTH_MESSAGES, INSTALL_HINT_STRINGS, LOGIN_LABELS, PUSH_TOGGLE_STRINGS, SESSION_EXPIRED } from './texts';
 
 const APP_TITLE = '🍯 Hanuhlášky';
 const SHARE_TITLE = 'Hanuhlášky';
 const LOCALE = 'cs-CZ';
+const INSTALL_HINT_KEY = 'hlasky:install-hint-dismissed';
 
 const config = readApiConfig(import.meta.env);
 const auth = createAuth({ apiUrl: config.primaryUrl });
@@ -42,21 +46,52 @@ const root = requiredElement('#app');
 const signInRequired = config.authProviders.length > 0;
 
 setupUpdatePrompt(registerSW, { message: 'Nová verze je k dispozici.', buttonLabel: 'Aktualizovat' });
+// Also clears the app icon badge whenever the app comes to the front.
+const push = createPushNotifications(client);
 
 let installHint: InstallHint | null = null;
+let pushToggle: PushToggle | null = null;
 
 /** Shown before sign-in too: an app installed on iOS has its own storage and starts signed out. */
 function showInstallHint(target: HTMLElement): void {
   installHint?.dispose();
   installHint = setupInstallHint(target, {
-    storageKey: 'hlasky:install-hint-dismissed',
+    storageKey: INSTALL_HINT_KEY,
     signInRequired,
     strings: INSTALL_HINT_STRINGS
   });
 }
 
+function isInstallHintDismissed(): boolean {
+  try {
+    return localStorage.getItem(INSTALL_HINT_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * In Safari on iPhone push only works in the Home Screen app, so the install
+ * hint above stands in for the switch. Once the hint is dismissed, the switch
+ * area says the same in one line instead.
+ */
+function showPushToggle(target: HTMLElement): void {
+  pushToggle?.dispose();
+  pushToggle = mountPushToggle(target, push, {
+    strings: { ...PUSH_TOGGLE_STRINGS, needsInstall: isInstallHintDismissed() ? PUSH_TOGGLE_STRINGS.needsInstall : '' }
+  });
+}
+
+/** Signed-out devices should stop getting the family's quotes. */
+async function signOut(): Promise<void> {
+  await push.disable().catch((error: unknown) => console.warn('Could not turn off notifications', error));
+  auth.logout();
+}
+
 function showLogin(message: string | null = null): void {
   store.clear();
+  pushToggle?.dispose();
+  pushToggle = null;
   renderLoginScreen(root, {
     title: APP_TITLE,
     providers: config.authProviders,
@@ -81,7 +116,8 @@ function errorMessage(error: unknown): string {
 /** Sends the user back to sign-in when the session expired or was revoked. */
 function handleAuthError(error: unknown): boolean {
   if (error instanceof ApiError && AUTH_ERROR_CODES.includes(error.code)) {
-    auth.logout();
+    // The worker rejects the unsubscribe call too, but the device still drops its subscription.
+    void signOut();
     showLogin(error.code === 'FORBIDDEN' ? AUTH_MESSAGES.not_allowed : SESSION_EXPIRED);
     return true;
   }
@@ -97,6 +133,7 @@ function showApp(): void {
       </header>
 
       <div id="install-hint"></div>
+      <div id="push"></div>
 
       <section class="add-form">
         <form id="add-form">
@@ -117,6 +154,7 @@ function showApp(): void {
     </main>
   `;
   showInstallHint(requiredElement('#install-hint'));
+  showPushToggle(requiredElement('#push'));
 
   const addForm = requiredElement<HTMLFormElement>('#add-form');
   const addText = requiredElement<HTMLTextAreaElement>('#add-text');
@@ -151,8 +189,8 @@ function showApp(): void {
 
   requiredElement('#quotes').addEventListener('click', (event) => void onQuoteClick(event));
 
-  document.querySelector('#logout')?.addEventListener('click', () => {
-    auth.logout();
+  document.querySelector('#logout')?.addEventListener('click', async () => {
+    await signOut();
     showLogin();
   });
 }
