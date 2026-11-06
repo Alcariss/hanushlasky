@@ -14,5 +14,6 @@ export default definePwaApp({
     type: 'image/png',
     purpose: size >= 192 ? 'any maskable' : 'any'
   })),
-  includeAssets: ICON_SIZES.map((size) => `icon-${size}x${size}.png`)
+  // pwa-192x192.png is the icon the kit's service worker puts on push notifications.
+  includeAssets: [...ICON_SIZES.map((size) => `icon-${size}x${size}.png`), 'pwa-192x192.png']
 });

@@ -1,4 +1,4 @@
-import type { InstallHintStrings } from '@alcariss/pwa-kit';
+import type { InstallHintStrings, PushToggleStrings } from '@alcariss/pwa-kit';
 
 export const AUTH_MESSAGES: Record<string, string> = {
   cancelled: 'Přihlášení bylo zrušeno.',
@@ -64,4 +64,11 @@ export const INSTALL_HINT_STRINGS: InstallHintStrings = {
     'Klepni na Nainstalovat aplikaci nebo Přidat na plochu.'
   ],
   macSafari: ['Zvol Soubor → Přidat do Docku.']
+};
+
+export const PUSH_TOGGLE_STRINGS: Partial<PushToggleStrings> = {
+  label: 'Upozornění na nové hlášky',
+  denied: 'Upozornění jsou zablokovaná. Povol je pro Hlášky v Nastavení telefonu.',
+  needsInstall: 'Upozornění fungují jen v aplikaci přidané na plochu: přidej si Hlášky na plochu a otevři je odtamtud.',
+  error: 'Upozornění se nepodařilo změnit. Zkus to znovu.'
 };
