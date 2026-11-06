@@ -1,6 +1,6 @@
 {
   "name": "hanushlasky",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,14 +11,14 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@alcariss/pwa-kit": "github:Alcariss/pwa-kit#semver:^1.2.0",
+    "lucide": "^1.39.0"
+  },
   "devDependencies": {
-    "@types/node": "^24.3.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.3",
     "vite-plugin-pwa": "^1.0.3",
     "vitest": "^4.1.11"
-  },
-  "dependencies": {
-    "lucide": "^1.39.0"
   }
 }

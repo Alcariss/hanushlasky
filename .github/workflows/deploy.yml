@@ -15,45 +15,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - name: Create .env
-        run: |
-          echo "VITE_APP_NAME=Hlášky" >> .env
-          echo "VITE_BASE_PATH=/hanushlasky/" >> .env
-          echo "VITE_API_URL_PRIMARY=$VITE_API_URL_PRIMARY" >> .env
-          echo "VITE_API_URL_FALLBACK=$VITE_API_URL_FALLBACK" >> .env
-          echo "VITE_API_TOKEN=$VITE_API_TOKEN" >> .env
-          echo "VITE_CACHE_TTL_MS=300000" >> .env
-          echo "VITE_BUILD_SHA=${GITHUB_SHA::7}" >> .env
-          echo "VITE_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .env
-        env:
-          VITE_API_URL_PRIMARY: ${{ secrets.VITE_API_URL_PRIMARY }}
-          VITE_API_URL_FALLBACK: ${{ secrets.VITE_API_URL_FALLBACK }}
-          VITE_API_TOKEN: ${{ secrets.VITE_API_TOKEN }}
-
-      - run: npm run build
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
   deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+    uses: Alcariss/pwa-kit/.github/workflows/deploy-pages.yml@v1
+    with:
+      auth-providers: google,github
+    secrets:
+      VITE_API_URL_PRIMARY: ${{ secrets.VITE_API_URL_PRIMARY }}
